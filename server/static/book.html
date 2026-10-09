@@ -59,6 +59,7 @@
       <a class="btn" id="ics" href="#">Добавить в календарь</a>
       <a class="btn ghost" id="gcal" href="#" target="_blank" rel="noopener">Google Календарь</a>
     </div>
+    <p class="note" id="ig-hint" hidden>Если календарь не открылся, нажмите <b>⋯</b> в правом верхнем углу и выберите «Открыть в браузере» — затем снова «Добавить в календарь».</p>
     <p class="note">Если планы изменятся, напишите менеджеру — время перенесут.</p>
   </section>
 </main>
@@ -106,6 +107,7 @@
       if(!r.ok){err.textContent=j.error||'Не получилось записаться. Попробуйте ещё раз.';err.hidden=false;if(r.status===409){pick=null;await load();}return;}
       $('done-when').textContent=`${dayLabel(j.date)}, ${pad(j.hour)}:00 по Москве`+(sameTZ?'':` — у вас ${locDay(j.start)}, ${loc(j.start)}`);
       $('ics').href=j.ics;$('gcal').href=j.gcal;
+      $('ig-hint').hidden=!/Instagram/i.test(navigator.userAgent); // встроенный браузер Instagram не всегда отдаёт событие в календарь
       ['s-day','s-time','s-form'].forEach(x=>$(x).hidden=true);$('done').hidden=false;window.scrollTo(0,0);
     }catch(ex){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';err.hidden=false;}
     finally{$('f-go').disabled=false;}
