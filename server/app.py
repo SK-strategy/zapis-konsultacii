@@ -37,7 +37,8 @@ def _secret():
     if not os.path.exists(p):
         with open(p, "w") as f:
             f.write(secrets.token_hex(32))
-    return open(p).read().strip()
+    with open(p) as f:
+        return f.read().strip()
 
 app.config.update(
     SECRET_KEY=_secret(),
@@ -53,7 +54,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS users(
   id INTEGER PRIMARY KEY, login TEXT UNIQUE NOT NULL, name TEXT NOT NULL, pw_hash TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS clients(
-  id INTEGER PRIMARY KEY, phone TEXT UNIQUE NOT NULL, name TEXT NOT NULL, telegram TEXT DEFAULT '',
+  id INTEGER PRIMARY KEY, phone TEXT UNIQUE NOT NULL, name TEXT NOT NULL, instagram TEXT DEFAULT '',
   status TEXT DEFAULT 'booked', notes TEXT DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS bookings(
   id INTEGER PRIMARY KEY, slot TEXT NOT NULL, date TEXT NOT NULL, hour INTEGER NOT NULL,
@@ -127,28 +128,30 @@ def norm_phone(raw):
     if not (10 <= len(d) <= 15): return None
     return "+" + d
 
-def norm_tg(raw):
+def norm_ig(raw):
+    """Ник в Instagram: принимает @ник, ник или ссылку на профиль, хранит как @ник."""
     raw = (raw or "").strip()
-    raw = re.sub(r"^(https?://)?t\.me/", "", raw)
-    if raw and not raw.startswith("@") and re.fullmatch(r"[A-Za-z0-9_]{4,32}", raw): raw = "@" + raw
+    raw = re.sub(r"^(https?://)?(www\.)?instagram\.com/", "", raw).split("?")[0].strip("/ ")
+    nick = raw.lstrip("@")
+    if re.fullmatch(r"[A-Za-z0-9._]{1,30}", nick): return "@" + nick
     return raw[:64]
 
-def upsert_client(name, phone, telegram):
+def upsert_client(name, phone, instagram):
     c = db()
     row = c.execute("SELECT * FROM clients WHERE phone=?", (phone,)).fetchone()
     t = iso_now()
     if row:
-        c.execute("UPDATE clients SET name=?, telegram=COALESCE(NULLIF(?,''),telegram), updated_at=? WHERE id=?",
-                  (name, telegram, t, row["id"]))
+        c.execute("UPDATE clients SET name=?, instagram=COALESCE(NULLIF(?,''),instagram), updated_at=? WHERE id=?",
+                  (name, instagram, t, row["id"]))
         return row["id"]
-    return c.execute("INSERT INTO clients(phone,name,telegram,status,created_at,updated_at) VALUES(?,?,?,?,?,?)",
-                     (phone, name, telegram, "booked", t, t)).lastrowid
+    return c.execute("INSERT INTO clients(phone,name,instagram,status,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                     (phone, name, instagram, "booked", t, t)).lastrowid
 
-def create_booking(date, hour, name, phone, telegram, note, source, user_id=None):
+def create_booking(date, hour, name, phone, instagram, note, source, user_id=None):
     c = db()
     try:
         c.execute("BEGIN IMMEDIATE")
-        cid = upsert_client(name, phone, telegram)
+        cid = upsert_client(name, phone, instagram)
         token = secrets.token_urlsafe(12)
         c.execute("INSERT INTO bookings(slot,date,hour,client_id,note,source,status,token,created_at,created_by)"
                   " VALUES(?,?,?,?,?,?,?,?,?,?)",
@@ -234,7 +237,7 @@ def api_book():
     b = body()
     name = (b.get("name") or "").strip()[:80]
     phone = norm_phone(b.get("phone"))
-    tg = norm_tg(b.get("telegram"))
+    ig = norm_ig(b.get("instagram"))
     note = (b.get("note") or "").strip()[:500]
     date, hour = b.get("date"), b.get("hour")
     if b.get("website"):  # ловушка для ботов: поле скрыто от людей
@@ -245,7 +248,7 @@ def api_book():
     if not isinstance(hour, int): return jsonify(error="Выберите время."), 400
     problem = slot_problem(date, hour)
     if problem: return jsonify(error=problem), 409
-    token = create_booking(date, hour, name, phone, tg, note, "bot")
+    token = create_booking(date, hour, name, phone, ig, note, "bot")
     if not token: return jsonify(error="Это время только что заняли. Выберите другое."), 409
     return jsonify(ok=True, **event_payload(date, hour, token))
 
@@ -311,9 +314,9 @@ def me(): return jsonify(name=session.get("name"), hours=HOURS, workdays=WORKDAY
 def booking_row(r):
     return {"id": r["id"], "slot": r["slot"], "date": r["date"], "hour": r["hour"], "status": r["status"],
             "source": r["source"], "note": r["note"], "created_at": r["created_at"], "created_by": r["created_by_name"],
-            "client": {"id": r["client_id"], "name": r["name"], "phone": r["phone"], "telegram": r["telegram"]}}
+            "client": {"id": r["client_id"], "name": r["name"], "phone": r["phone"], "instagram": r["instagram"]}}
 
-BOOKING_SQL = ("SELECT b.*, c.name, c.phone, c.telegram, u.name AS created_by_name FROM bookings b "
+BOOKING_SQL = ("SELECT b.*, c.name, c.phone, c.instagram, u.name AS created_by_name FROM bookings b "
                "JOIN clients c ON c.id=b.client_id LEFT JOIN users u ON u.id=b.created_by ")
 
 @app.get("/api/admin/week")
@@ -340,7 +343,7 @@ def admin_create():
     date, hour = b.get("date"), b.get("hour")
     problem = slot_problem(date, hour if isinstance(hour, int) else -1, for_client=False)
     if problem: return jsonify(error=problem), 409
-    token = create_booking(date, hour, name, phone, norm_tg(b.get("telegram")), (b.get("note") or "")[:500], "manager", session["uid"])
+    token = create_booking(date, hour, name, phone, norm_ig(b.get("instagram")), (b.get("note") or "")[:500], "manager", session["uid"])
     if not token: return jsonify(error="Это время только что заняли."), 409
     return jsonify(ok=True, **event_payload(date, hour, token))
 
@@ -389,7 +392,7 @@ def clients():
     where, args = [], []
     if q:
         digits = re.sub(r"\D", "", q)
-        cond = ["lower(c.name) LIKE ?", "lower(c.telegram) LIKE ?", "lower(c.notes) LIKE ?"]
+        cond = ["lower(c.name) LIKE ?", "lower(c.instagram) LIKE ?", "lower(c.notes) LIKE ?"]
         args += [f"%{q}%"] * 3
         if digits: cond.append("c.phone LIKE ?"); args.append(f"%{digits}%")
         where.append("(" + " OR ".join(cond) + ")")
@@ -397,7 +400,7 @@ def clients():
     if where: sql += "WHERE " + " AND ".join(where) + " "
     sql += "GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 500"
     rows = db().execute(sql, args).fetchall()
-    return jsonify(clients=[{"id": r["id"], "name": r["name"], "phone": r["phone"], "telegram": r["telegram"],
+    return jsonify(clients=[{"id": r["id"], "name": r["name"], "phone": r["phone"], "instagram": r["instagram"],
                              "status": r["status"], "notes": r["notes"], "visits": r["visits"], "last_slot": r["last_slot"],
                              "created_at": r["created_at"]} for r in rows])
 
@@ -418,7 +421,7 @@ def client_update(cid):
     if not c.execute("SELECT 1 FROM clients WHERE id=?", (cid,)).fetchone(): return jsonify(error="Клиент не найден."), 404
     fields, args = [], []
     if "name" in b and (b["name"] or "").strip(): fields.append("name=?"); args.append(b["name"].strip()[:80])
-    if "telegram" in b: fields.append("telegram=?"); args.append(norm_tg(b["telegram"]))
+    if "instagram" in b: fields.append("instagram=?"); args.append(norm_ig(b["instagram"]))
     if "notes" in b: fields.append("notes=?"); args.append((b["notes"] or "")[:4000])
     if "status" in b:
         if b["status"] not in STATUSES or b["status"] == "cancelled": return jsonify(error="Неизвестный статус."), 400

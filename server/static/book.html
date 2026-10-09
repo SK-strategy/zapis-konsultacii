@@ -44,7 +44,7 @@
       <p id="picked"></p>
       <div class="field"><label for="f-name">Как к вам обращаться</label><input id="f-name" autocomplete="name" required></div>
       <div class="field"><label for="f-phone">Телефон</label><input id="f-phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00" required></div>
-      <div class="field"><label for="f-tg">Telegram (необязательно)</label><input id="f-tg" placeholder="@username"></div>
+      <div class="field"><label for="f-ig">Instagram (необязательно)</label><input id="f-ig" placeholder="@username"></div>
       <div class="field"><label for="f-note">С каким запросом придёте (необязательно)</label><textarea id="f-note" rows="2"></textarea></div>
       <div class="hp" aria-hidden="true"><label for="f-web">Не заполняйте</label><input id="f-web" tabindex="-1" autocomplete="off"></div>
       <label class="check"><input type="checkbox" id="f-consent"><span>Согласна(ен) на <a href="/privacy" target="_blank">обработку персональных данных</a> для записи на консультацию</span></label>
@@ -74,11 +74,11 @@
   const dayLabel=ds=>{const[y,m,d]=ds.split('-').map(Number);const w=new Date(Date.UTC(y,m-1,d)).getUTCDay();return`${WD[w]}, ${d} ${MON[m-1]}`;};
   const el=(t,a={},k=[])=>{const n=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='text')n.textContent=v;else if(x.startsWith('on'))n.addEventListener(x.slice(2),v);else if(v===true)n.setAttribute(x,'');else if(v!==false&&v!=null)n.setAttribute(x,v);}for(const c of[].concat(k))if(c!=null)n.append(c);return n;};
 
-  // подстановка из ссылки бота: /?name=Анна&phone=79001234567&tg=anna
+  // подстановка из ссылки бота: /?name=Анна&phone=79001234567&ig=anna
   const q=new URLSearchParams(location.search);
   if(q.get('name'))$('f-name').value=q.get('name');
   if(q.get('phone'))$('f-phone').value=q.get('phone');
-  if(q.get('tg'))$('f-tg').value=q.get('tg');
+  if(q.get('ig'))$('f-ig').value=q.get('ig');
 
   let days=[],day=null,pick=null;
   async function load(){
@@ -98,7 +98,7 @@
   }
   $('f').addEventListener('submit',async e=>{
     e.preventDefault();const err=$('f-err');err.hidden=true;
-    const b={date:pick.date,hour:pick.hour,name:$('f-name').value.trim(),phone:$('f-phone').value.trim(),telegram:$('f-tg').value.trim(),note:$('f-note').value.trim(),consent:$('f-consent').checked,website:$('f-web').value};
+    const b={date:pick.date,hour:pick.hour,name:$('f-name').value.trim(),phone:$('f-phone').value.trim(),instagram:$('f-ig').value.trim(),note:$('f-note').value.trim(),consent:$('f-consent').checked,website:$('f-web').value};
     if(!b.name||!b.phone){err.textContent='Укажите имя и телефон.';err.hidden=false;return;}
     if(!b.consent){err.textContent='Отметьте согласие на обработку данных — без него записать не получится.';err.hidden=false;return;}
     $('f-go').disabled=true;
