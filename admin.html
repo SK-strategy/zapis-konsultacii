@@ -4,7 +4,8 @@
 <title>Админка консультаций</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
-<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/demo-api.js"></script>
 <style>
 .top{max-width:1180px;margin:0 auto;padding-block:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
 .brand{font:600 16px/1.2 var(--f-display)}
@@ -69,6 +70,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
 </style>
 </head><body>
+<div style="background:var(--warn-soft);color:var(--warn);font-size:13px;padding:8px 12px;border-radius:10px;max-width:1180px;margin:10px auto 0">Тестовая версия: записи хранятся только в этом браузере. В рабочей версии здесь вход по логину и паролю. <a href="./">Страница для клиентов</a>.</div>
 <header class="top">
   <span class="brand">Консультации</span>
   <div class="seg" role="group" aria-label="Раздел">
@@ -111,7 +113,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
 
   async function api(path,opt={}){
     const r=await fetch(path,{...opt,headers:{'Content-Type':'application/json','X-Requested-With':'fetch',...(opt.headers||{})},body:opt.body?JSON.stringify(opt.body):undefined});
-    if(r.status===401){location.href='/admin/login';throw new Error('auth');}
+    if(r.status===401){location.href='./';throw new Error('auth');}
     const j=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(j.error||'Не сохранилось. Попробуйте ещё раз.');
     return j;
@@ -242,7 +244,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
     name==='crm'?loadClients():loadWeek();
   }
   $('t-sched').onclick=()=>tab('sched');$('t-crm').onclick=()=>tab('crm');
-  $('logout').onclick=async()=>{try{await api('/admin/logout',{method:'POST'});}catch(e){}location.href='/admin/login';};
+  $('logout').onclick=async()=>{try{await api('/admin/logout',{method:'POST'});}catch(e){}location.href='./';};
 
   (async()=>{
     const me=await api('/api/admin/me');STATUS=me.statuses;HOURS=me.hours;WORK=me.workdays;$('who').textContent=me.name;

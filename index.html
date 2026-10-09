@@ -3,467 +3,167 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex">
-<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style>
-<title>Консультации Ниловой</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap">
+<title>Проверка: подходит ли списание долгов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
+<link rel="stylesheet" href="static/app.css">
+<script src="static/demo-api.js"></script>
 <style>
-/* Layout: narrow booking column for leads; wide week grid (days × hours) for managers. */
-:root{
-  --bg:#f6f4f1; --surface:#ffffff; --sunk:#efebe6; --line:#e1dbd3;
-  --fg:#22201d; --muted:#6f6860; --accent:#7a2e4f; --accent-fg:#ffffff; --accent-soft:#f3e4ea;
-  --ok:#2f7a4f; --ok-soft:#e2f1e7; --warn:#a2581a; --warn-soft:#f8eadb; --bad:#a4322b; --bad-soft:#f7e1df; --blk:#8a8178;
-  --f-display:"Unbounded", "Onest", system-ui, sans-serif;
-  --f-body:"Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --r:10px;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#181614; --surface:#211f1c; --sunk:#2a2724; --line:#37332e;
-  --fg:#efeae4; --muted:#a59d93; --accent:#e18cb0; --accent-fg:#1d1416; --accent-soft:#3a2530;
-  --ok:#7cc89a; --ok-soft:#1f3328; --warn:#e3a36a; --warn-soft:#3a2b1d; --bad:#ec8f86; --bad-soft:#3d2321; --blk:#8f877e; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#181614; --surface:#211f1c; --sunk:#2a2724; --line:#37332e;
-  --fg:#efeae4; --muted:#a59d93; --accent:#e18cb0; --accent-fg:#1d1416; --accent-soft:#3a2530;
-  --ok:#7cc89a; --ok-soft:#1f3328; --warn:#e3a36a; --warn-soft:#3a2b1d; --bad:#ec8f86; --bad-soft:#3d2321; --blk:#8f877e; color-scheme:dark}
-
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:0 48px}
-button,input,select,textarea{font:inherit;color:inherit}
-button{cursor:pointer}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.tnum{font-variant-numeric:tabular-nums}
-
-/* top switch — only in the demo; in production these are two separate addresses */
-.modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;max-width:1120px;margin:0 auto;padding-block:14px;border-bottom:1px solid var(--line)}
-.modebar .demo{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.seg{display:inline-flex;background:var(--sunk);border-radius:999px;padding:3px}
-.seg button{border:0;background:none;padding:6px 14px;border-radius:999px;color:var(--muted);font-weight:500}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0 / .08)}
-
-/* ---------- lead page ---------- */
-.lead{max-width:560px;margin:0 auto;padding-block:28px 0;display:grid;gap:24px}
-.lead h1{font:600 clamp(22px,5vw,28px)/1.2 var(--f-display);margin:0;text-wrap:balance}
-.lead .sub{color:var(--muted);margin:6px 0 0}
-.step{display:grid;gap:10px}
-.step h2{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
-.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+/* Один столбец как переписка: сообщения эксперта слева, ответы кнопками */
+.flow{max-width:560px;margin:0 auto;padding-block:20px 0;display:grid;gap:16px}
+.who{display:flex;gap:10px;align-items:center}
+.ava{width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font:600 14px/1 var(--f-display);flex:0 0 auto}
+.who b{display:block;font-weight:600}.who small{color:var(--muted);font-size:13px}
+.progress{display:flex;gap:6px}
+.progress i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.progress i.on{background:var(--accent)}
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:14px 16px;white-space:pre-line;max-width:100%}
+.msg h1{font-size:clamp(20px,5.5vw,24px);margin:0 0 8px;white-space:normal}
+.msg .q{font-weight:600;font-size:17px;margin:0}
+.msg .hint{color:var(--muted);font-size:14px;margin:6px 0 0}
+.step-n{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.opts{display:grid;gap:8px}
+.opt{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;text-align:left;font-weight:500;font-size:16px}
+.opt:hover{border-color:var(--accent)}
+.opt:active{background:var(--accent-soft)}
+.back{border:0;background:none;color:var(--muted);padding:0;font-size:14px;justify-self:start}
+.result{border-left:4px solid var(--accent)}
+.offer{display:grid;gap:12px;background:var(--accent-soft);border-radius:16px;padding:16px}
+.offer h2{font:600 18px/1.3 var(--f-display);margin:0}
+.offer p{margin:0;white-space:pre-line}
+.big{width:100%;padding:15px 20px;font-size:16px}
+.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
 .day{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 12px;text-align:left;min-width:84px}
-.day b{display:block;font-weight:600}
-.day small{color:var(--muted);font-size:12px}
+.day b{display:block;font-weight:600}.day small{color:var(--muted);font-size:12px}
 .day[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .day:disabled{opacity:.45;cursor:default}
 .times{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .time{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:10px 12px;text-align:left;display:grid;gap:2px}
-.time b{font-size:17px;font-weight:600}
-.time small{color:var(--muted);font-size:12px}
+.time b{font-size:17px;font-weight:600}.time small{color:var(--muted);font-size:12px}
 .time[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .time:disabled{background:var(--sunk);color:var(--muted);cursor:default;text-decoration:line-through}
-.time:disabled b{font-weight:500}
+.label{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
 .form{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
-.field{display:grid;gap:4px}
-.field label{font-size:13px;color:var(--muted)}
-.field input,.field textarea,.field select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px;width:100%}
-.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}
-.check input{margin-top:3px}
-.btn{border:0;border-radius:999px;padding:12px 20px;background:var(--accent);color:var(--accent-fg);font-weight:600}
-.btn:disabled{opacity:.5;cursor:default}
-.btn.ghost{background:var(--sunk);color:var(--fg)}
-.btn.danger{background:var(--bad-soft);color:var(--bad)}
-.picked{font-size:14px}
-.picked b{font-weight:600}
-.err{color:var(--bad);font-size:14px;margin:0}
-.done{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:grid;gap:8px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}.check input{margin-top:3px;width:18px;height:18px;flex:0 0 auto}
+.done{display:grid;gap:10px}
 .done h2{font:600 22px/1.25 var(--f-display);margin:0}
-.note{font-size:13px;color:var(--muted)}
-
-/* ---------- admin ---------- */
-.admin{max-width:1120px;margin:0 auto;padding-block:24px 0;display:grid;gap:18px}
-.ahead{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
-.ahead h1{font:600 22px/1.2 var(--f-display);margin:0}
-.ahead .sub{color:var(--muted);margin:2px 0 0;font-size:14px}
-.weeknav{display:flex;gap:6px;align-items:center}
-.weeknav button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
-.weeknav .lbl{min-width:150px;text-align:center;font-weight:500}
-.stats{display:flex;flex-wrap:wrap;gap:8px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px}
-.stat b{font-weight:600}
-.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
-.gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
-table.week{border-collapse:collapse;width:100%;min-width:760px}
-.week th,.week td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:0;vertical-align:top}
-.week tr>*:last-child{border-right:0}
-.week tbody tr:last-child>*{border-bottom:0}
-.week thead th{padding:10px;text-align:left;font-weight:600;font-size:14px;background:var(--sunk)}
-.week thead th small{display:block;font-weight:400;color:var(--muted);font-size:12px}
-.week thead th.today{color:var(--accent)}
-.week th.hr{width:92px;padding:10px;font-weight:600;text-align:left;font-size:14px;background:var(--sunk)}
-.week th.hr small{display:block;font-weight:400;color:var(--muted);font-size:11px}
-.cell{display:grid;width:100%;min-height:64px;border:0;background:none;text-align:left;padding:8px 10px;gap:2px;align-content:start}
-.cell:hover{background:var(--sunk)}
-.cell .nm{font-weight:600;font-size:14px;overflow-wrap:anywhere}
-.cell .mt{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
-.cell.free .mt{color:var(--muted)}
-.cell.free .plus{color:var(--muted);font-size:13px}
-.cell.past{background:repeating-linear-gradient(135deg,transparent 0 6px,var(--sunk) 6px 7px);cursor:default}
-.cell.blocked{background:var(--sunk)}
-.cell.blocked .nm{color:var(--blk);font-weight:500}
-.cell.booked{border-left:4px solid var(--accent)}
-.cell.came{border-left:4px solid var(--ok)}
-.cell.bought{border-left:4px solid var(--ok);background:var(--ok-soft)}
-.cell.noshow{border-left:4px solid var(--bad);background:var(--bad-soft)}
-.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:999px;padding:1px 8px;width:max-content}
-.pill.bot{background:var(--accent-soft);color:var(--accent)}
-.pill.man{background:var(--warn-soft);color:var(--warn)}
-
-/* side panel */
-.panel{position:fixed;inset:0;display:grid;justify-items:end;background:rgb(0 0 0 / .35);z-index:5}
-.panel[hidden]{display:none!important}
-.sheet{width:min(420px,100%);height:100%;background:var(--surface);padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));overflow-y:auto;display:grid;gap:14px;align-content:start;border-left:1px solid var(--line)}
-.sheet h2{font:600 19px/1.3 var(--f-display);margin:0}
-.sheet .when{color:var(--muted);margin:-8px 0 0;font-size:14px}
-.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:14px}
-.kv dt{color:var(--muted)}
-.kv dd{margin:0;overflow-wrap:anywhere}
-.row{display:flex;flex-wrap:wrap;gap:8px}
-.statusset{display:flex;flex-wrap:wrap;gap:6px}
-.statusset button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:13px}
-.statusset button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--fg);font-weight:600}
-.confirm{background:var(--bad-soft);border-radius:10px;padding:12px;display:grid;gap:8px;font-size:14px}
-.state{max-width:560px;margin:40px auto;text-align:center;color:var(--muted)}
-@media (prefers-reduced-motion: no-preference){.sheet{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
-</style><style>.demo-note{max-width:1120px;margin:10px auto 0;font-size:13px;color:var(--muted);background:var(--sunk);border-radius:10px;padding:8px 12px}</style>
+.loading{color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.screen{animation:rise .2s ease-out}@keyframes rise{from{transform:translateY(6px);opacity:.4}}}
+</style>
 </head>
 <body>
-
-<script>
-/* Демо-хранилище: записи живут в браузере (localStorage). Повторяет нужную странице часть API базы. */
-(function(){
-  const KEY='zapis-demo-v1', subs=[];
-  const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}};
-  let mem=load();
-  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(mem))}catch(e){} notify();};
-  const snap=(id,d)=>({id,exists:!!d,data:()=>d,metadata:{fromCache:false,hasPendingWrites:false}});
-  function notify(){subs.forEach(s=>s());}
-  window.addEventListener('storage',e=>{if(e.key===KEY){mem=load();notify();}});
-  function query(col,filters){
-    return {
-      where(f,op,v){return query(col,filters.concat([[f,op,v]]));},
-      onSnapshot(next){
-        const run=()=>{const c=mem[col]||{};const docs=Object.keys(c).sort().filter(id=>filters.every(([f,op,v])=>op==='>='?c[id][f]>=v:true)).map(id=>snap(id,c[id]));next({docs,size:docs.length,empty:!docs.length,docChanges:()=>[],metadata:{fromCache:false,hasPendingWrites:false}});};
-        subs.push(run);setTimeout(run,0);return()=>{const i=subs.indexOf(run);if(i>=0)subs.splice(i,1);};
-      },
-      doc(id){return docRef(col,id);}
-    };
-  }
-  function docRef(col,id){return{
-    id,path:col+'/'+id,
-    async get(){return snap(id,(mem[col]||{})[id]);},
-    async set(d){(mem[col]=mem[col]||{})[id]=JSON.parse(JSON.stringify(d));save();},
-    async update(d){const c=mem[col]||{};if(!c[id])throw{code:'invalid_argument'};Object.assign(c[id],d);save();},
-    async delete(){if(mem[col]){delete mem[col][id];save();}},
-    async acquire(){return{acquired:true};}
-  };}
-  const db={collection:col=>query(col,[]),doc:p=>{const[c,id]=p.split('/');return docRef(c,id);}};
-  window.claude={use:async n=>n==='db'?db:null};
-})();
-</script>
-
-
-<div class="modebar">
-  <span class="demo">Тестовая версия</span>
-  <div class="seg" role="group" aria-label="Режим">
-    <button id="m-lead" aria-pressed="true">Запись (как видит клиент)</button>
-    <button id="m-admin" aria-pressed="false">Админка</button>
-  </div>
-</div>
-
-<p class="demo-note">Демо-версия: записи сохраняются только в этом браузере. Запишитесь как клиент, затем откройте «Админку» — запись будет там.</p>
-<main id="lead" class="lead">
-  <header>
-    <h1>Запись на консультацию</h1>
-    <p class="sub">Консультация длится час. Выберите удобный день и время — время показано по Москве и по вашему часовому поясу.</p>
-  </header>
-  <section class="step" aria-labelledby="h-day">
-    <h2 id="h-day">1. День</h2>
-    <div class="days" id="days"></div>
-  </section>
-  <section class="step" aria-labelledby="h-time">
-    <h2 id="h-time">2. Время</h2>
-    <div class="times" id="times"></div>
-  </section>
-  <section class="step" aria-labelledby="h-form" id="formstep" hidden>
-    <h2 id="h-form">3. Контакты</h2>
-    <form class="form" id="leadform" novalidate>
-      <p class="picked" id="picked"></p>
-      <div class="field"><label for="l-name">Как к вам обращаться</label><input id="l-name" autocomplete="name" required></div>
-      <div class="field"><label for="l-contact">Telegram или телефон</label><input id="l-contact" placeholder="@username или +7…" required></div>
-      <div class="field"><label for="l-q">С каким запросом придёте (необязательно)</label><textarea id="l-q" rows="2"></textarea></div>
-      <label class="check"><input type="checkbox" id="l-consent"> <span>Согласна(ен) на обработку персональных данных для записи на консультацию</span></label>
-      <p class="err" id="l-err" hidden></p>
-      <button class="btn" id="l-submit" type="submit">Записаться</button>
-    </form>
-  </section>
-  <section class="done" id="done" hidden>
-    <h2>Вы записаны</h2>
-    <p id="done-when" class="tnum"></p>
-    <p class="note">Перед консультацией с вами свяжется менеджер. Если планы изменятся, напишите менеджеру — время перенесут.</p>
-    <div><button class="btn ghost" id="again" type="button">Записать ещё одного человека</button></div>
-  </section>
+<div style="background:var(--warn-soft);color:var(--warn);font-size:13px;padding:8px 12px;border-radius:10px;max-width:1180px;margin:10px auto 0">Тестовая версия: записи хранятся только в этом браузере. Посмотреть, как это видят менеджеры: <a href="admin.html">админка</a>.</div>
+<main class="flow">
+  <div class="who"><span class="ava" id="ava">АГ</span><div><b id="expert">Анастасия Губенко</b><small>юрист по банкротству</small></div></div>
+  <p class="loading" id="loading">Загружаю…</p>
+  <p class="err" id="loaderr" hidden>Не получилось загрузить страницу. Проверьте интернет и обновите её.</p>
+  <div id="screen"></div>
 </main>
-
-<main id="admin" class="admin" hidden>
-  <div class="ahead">
-    <div>
-      <h1>Расписание консультаций</h1>
-      <p class="sub">Будни, 06:00–13:00 по Москве. Нажмите на ячейку, чтобы записать человека, открыть запись или закрыть время.</p>
-    </div>
-    <div class="weeknav">
-      <button id="prevw" aria-label="Предыдущая неделя">←</button>
-      <span class="lbl tnum" id="weeklbl"></span>
-      <button id="nextw" aria-label="Следующая неделя">→</button>
-      <button id="thisw">Сегодня</button>
-    </div>
-  </div>
-  <div class="stats" id="stats"></div>
-  <div class="legend">
-    <span><i class="dot" style="background:var(--accent)"></i>Записан</span>
-    <span><i class="dot" style="background:var(--ok)"></i>Пришёл / купил</span>
-    <span><i class="dot" style="background:var(--bad)"></i>Не пришёл</span>
-    <span><i class="dot" style="background:var(--sunk);border:1px solid var(--line)"></i>Время закрыто</span>
-    <span><span class="pill bot">бот</span> записался сам</span>
-    <span><span class="pill man">менеджер</span> добавил менеджер</span>
-  </div>
-  <div class="gridwrap"><table class="week" id="week"></table></div>
-</main>
-
-<div class="panel" id="panel" hidden>
-  <aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="p-title"></aside>
-</div>
-
-<div class="state" id="nodb" hidden>
-  <p>Записи хранятся в общей базе этой страницы. Сейчас база недоступна — откройте страницу в Claude под своим аккаунтом.</p>
-</div>
-
 <script>
 (function(){
-  const HOURS=[6,7,8,9,10,11,12];           // начало консультаций по Москве
-  const MSK=3*3600e3;                        // Москва UTC+3 без перехода на летнее время
-  const DAYS_AHEAD=14;                       // сколько дней вперёд открыта запись для клиентов
-  const LEAD_MIN=60*60e3;                    // нельзя записаться менее чем за час
-  const WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  const MON=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-  const STATUS={booked:'Записан',came:'Пришёл',noshow:'Не пришёл',bought:'Купил'};
-  const localTZ=Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const sameTZ=Math.abs(new Date().getTimezoneOffset()+180)<1;
-
-  let db=null,user=null,myId=null;
-  let bookings={},blocked={};                // slotId -> data
-  let state={mode:'lead',day:null,slot:null,weekStart:null};
-
   const $=id=>document.getElementById(id);
-  const el=(tag,attrs={},kids=[])=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k==='text')n.textContent=v;else if(k.startsWith('on'))n.addEventListener(k.slice(2),v);else if(v===true)n.setAttribute(k,'');else if(v!==false&&v!=null)n.setAttribute(k,v);}for(const c of[].concat(kids))if(c!=null)n.append(c);return n;};
+  const el=(t,a={},k=[])=>{const n=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')n.className=v;else if(x==='text')n.textContent=v;else if(x==='html')n.innerHTML=v;else if(x.startsWith('on'))n.addEventListener(x.slice(2),v);else if(v===true)n.setAttribute(x,'');else if(v!==false&&v!=null)n.setAttribute(x,v);}for(const c of[].concat(k))if(c!=null)n.append(c);return n;};
+  const WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],MON=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
   const pad=n=>String(n).padStart(2,'0');
+  const sameTZ=Math.abs(new Date().getTimezoneOffset()+180)<1;
+  const loc=iso=>new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(iso));
+  const locDay=iso=>new Intl.DateTimeFormat('ru-RU',{weekday:'short',day:'numeric',month:'short'}).format(new Date(iso));
+  const dayLabel=ds=>{const[y,m,d]=ds.split('-').map(Number);const w=new Date(Date.UTC(y,m-1,d)).getUTCDay();return`${WD[w]}, ${d} ${MON[m-1]}`;};
+  const q=new URLSearchParams(location.search);
+  const prefill={name:q.get('name')||'',phone:q.get('phone')||''};
 
-  // ----- время -----
-  function mskParts(ms){const d=new Date(ms+MSK);return{y:d.getUTCFullYear(),m:d.getUTCMonth(),d:d.getUTCDate(),wd:d.getUTCDay(),h:d.getUTCHours()};}
-  const dateKey=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
-  const slotId=(dk,h)=>`${dk}_${pad(h)}`;
-  function slotStart(dk,h){const[y,m,d]=dk.split('-').map(Number);return Date.UTC(y,m-1,d,h)-MSK;}
-  function dayFromKey(dk){const[y,m,d]=dk.split('-').map(Number);const t=new Date(Date.UTC(y,m-1,d));return{y,m:m-1,d,wd:t.getUTCDay()};}
-  function addDays(dk,n){const[y,m,d]=dk.split('-').map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return dateKey(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate());}
-  const todayKey=()=>{const p=mskParts(Date.now());return dateKey(p.y,p.m,p.d);};
-  const isWork=dk=>{const w=dayFromKey(dk).wd;return w>=1&&w<=5;};
-  const localTime=ms=>new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit',timeZone:localTZ}).format(ms);
-  const localDay=ms=>new Intl.DateTimeFormat('ru-RU',{weekday:'short',day:'numeric',month:'short',timeZone:localTZ}).format(ms);
-  const dayLabel=dk=>{const p=dayFromKey(dk);return`${WD[p.wd]}, ${p.d} ${MON[p.m]}`;};
-  function mondayOf(dk){const w=dayFromKey(dk).wd;return addDays(dk,-((w+6)%7));}
+  // метка визита для статистики воронки (без личных данных)
+  let sid='';try{sid=sessionStorage.getItem('zsid')||'';}catch(e){}
+  if(!sid){sid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,'0')).join('');try{sessionStorage.setItem('zsid',sid);}catch(e){}}
+  const track=ev=>{try{fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid,event:ev}),keepalive:true});}catch(e){}};
 
-  // занят ли слот
-  const isBooked=id=>!!(bookings[id]&&bookings[id].name);
-  const isBlocked=id=>!!blocked[id];
-  const isFree=(dk,h)=>{const id=slotId(dk,h);return!isBooked(id)&&!isBlocked(id)&&slotStart(dk,h)-Date.now()>LEAD_MIN;};
+  let F=null,answers={},step=0,days=[],day=null,pick=null;
+  const show=(...kids)=>{$('screen').replaceChildren(el('div',{class:'screen flow',style:'padding:0'},kids));window.scrollTo(0,0);};
+  const progress=n=>el('div',{class:'progress','aria-label':`Шаг ${n} из 5`},[1,2,3,4,5].map(i=>el('i',{class:i<=n?'on':''})));
 
-  // ----- режим -----
-  function setMode(m){
-    state.mode=m;
-    $('m-lead').setAttribute('aria-pressed',m==='lead');$('m-admin').setAttribute('aria-pressed',m==='admin');
-    $('lead').hidden=m!=='lead';$('admin').hidden=m!=='admin';
-    try{history.replaceState(null,'',m==='admin'?'#admin':'#')}catch(e){}
-    render();
+  function greeting(){
+    show(progress(0),el('div',{class:'msg'},[el('h1',{text:F.greeting.title}),F.greeting.text]),
+      el('button',{class:'btn big',type:'button',text:F.greeting.button,onclick:()=>{track('start');step=0;question();}}));
   }
-  $('m-lead').onclick=()=>setMode('lead');
-  $('m-admin').onclick=()=>setMode('admin');
-
-  // ----- страница клиента -----
-  function leadDays(){const out=[];let dk=todayKey();for(let i=0;i<DAYS_AHEAD;i++){if(isWork(dk))out.push(dk);dk=addDays(dk,1);}return out;}
-  function renderLead(){
-    const days=leadDays();
-    if(!state.day||!days.includes(state.day)||!HOURS.some(h=>isFree(state.day,h)))state.day=days.find(dk=>HOURS.some(h=>isFree(dk,h)))||days[0];
-    const dwrap=$('days');dwrap.replaceChildren(...days.map(dk=>{
-      const free=HOURS.filter(h=>isFree(dk,h)).length;
-      return el('button',{class:'day',type:'button','aria-pressed':String(dk===state.day),disabled:free===0,onclick:()=>{state.day=dk;state.slot=null;renderLead();}},[
-        el('b',{text:dayLabel(dk)}),el('small',{class:'tnum',text:free?`свободно: ${free}`:'всё занято'})]);
-    }));
-    const twrap=$('times');
-    twrap.replaceChildren(...HOURS.map(h=>{
-      const ms=slotStart(state.day,h),id=slotId(state.day,h),free=isFree(state.day,h);
-      return el('button',{class:'time',type:'button',disabled:!free,'aria-pressed':String(state.slot===id),onclick:()=>{state.slot=id;renderLead();setTimeout(()=>$('l-name').focus(),0);}},[
-        el('b',{class:'tnum',text:`${pad(h)}:00 МСК`}),
-        el('small',{class:'tnum',text:free?(sameTZ?'по Москве':`у вас ${localTime(ms)}`):'занято'})]);
-    }));
-    if(state.slot&&!isFree(...splitId(state.slot)))state.slot=null;
-    $('formstep').hidden=!state.slot;
-    if(state.slot){const[dk,h]=splitId(state.slot);const ms=slotStart(dk,h);
-      $('picked').replaceChildren(el('span',{text:'Вы выбрали: '}),el('b',{class:'tnum',text:`${dayLabel(dk)}, ${pad(h)}:00 по Москве`}),sameTZ?null:el('span',{class:'tnum',text:` (у вас ${localDay(ms)}, ${localTime(ms)})`}));}
+  function question(){
+    const Q=F.questions[step];
+    show(progress(step+1),
+      step===0?el('div',{class:'msg',text:F.intro}):null,
+      el('div',{class:'msg'},[el('div',{class:'step-n',text:`Вопрос ${step+1} из ${F.questions.length}`}),el('p',{class:'q',text:Q.text}),Q.hint?el('p',{class:'hint',text:Q.hint}):null]),
+      el('div',{class:'opts'},Q.options.map(o=>el('button',{class:'opt',type:'button',text:o.label,onclick:()=>{answers[Q.id]=o.id;step++;step<F.questions.length?question():result();}}))),
+      el('button',{class:'back',type:'button',text:'← Назад',onclick:()=>{if(step===0)greeting();else{step--;question();}}}));
   }
-  function splitId(id){const[dk,h]=id.split('_');return[dk,Number(h)];}
-
-  // занять слот: короткая блокировка, проверка, запись
-  async function claim(id,body){
-    const ref=db.doc('bookings/'+id);
-    try{const r=await ref.acquire({holder:myId||('v'+Math.random().toString(36).slice(2)),ttlMs:5000});if(!r.acquired)return'busy';}catch(e){}
-    const[s,b]=await Promise.all([ref.get(),db.doc('blocked/'+id).get()]);
-    if((s.exists&&s.data().name)||b.exists)return'busy';
-    await ref.set(body);return'ok';
+  function scenario(a){
+    if(a.debt!=='gt500')return's7';
+    return{'yes|official':'s1','no|none':'s2','yes|business':'s3','yes|none':'s4','no|official':'s5','no|business':'s6'}[a.property+'|'+a.work];
   }
-
-  $('leadform').addEventListener('submit',async e=>{
-    e.preventDefault();
-    const name=$('l-name').value.trim(),contact=$('l-contact').value.trim(),err=$('l-err');
-    err.hidden=true;
-    if(!name||!contact){err.textContent='Укажите имя и Telegram или телефон.';err.hidden=false;return;}
-    if(!$('l-consent').checked){err.textContent='Отметьте согласие на обработку данных — без него записать не получится.';err.hidden=false;return;}
-    if(!db){err.textContent='База записей сейчас недоступна. Попробуйте позже.';err.hidden=false;return;}
-    const id=state.slot,[dk,h]=splitId(id);
-    $('l-submit').disabled=true;
-    try{
-      const res=await claim(id,{date:dk,hour:h,name,contact,note:$('l-q').value.trim(),source:'bot',status:'booked',createdAt:new Date().toISOString(),createdBy:myId||null});
-      if(res==='busy'){err.textContent='Это время только что заняли. Выберите другое.';err.hidden=false;state.slot=null;renderLead();return;}
-      const ms=slotStart(dk,h);
-      $('done-when').textContent=`${dayLabel(dk)}, ${pad(h)}:00 по Москве`+(sameTZ?'':` — у вас ${localDay(ms)}, ${localTime(ms)}`);
-      $('done').hidden=false;['formstep'].forEach(x=>$(x).hidden=true);
-      document.querySelectorAll('#lead .step').forEach(s=>s.hidden=true);
-      $('leadform').reset();state.slot=null;
-    }catch(ex){err.textContent=ex&&ex.code==='invalid_argument'?'У вашего аккаунта нет прав на запись в эту таблицу.':'Не получилось записаться. Попробуйте ещё раз.';err.hidden=false;}
-    finally{$('l-submit').disabled=false;}
-  });
-  $('again').onclick=()=>{$('done').hidden=true;document.querySelectorAll('#lead .step').forEach(s=>s.hidden=false);renderLead();};
-
-  // ----- админка -----
-  function renderAdmin(){
-    if(!state.weekStart)state.weekStart=mondayOf(todayKey());
-    const days=[0,1,2,3,4].map(i=>addDays(state.weekStart,i)),tk=todayKey();
-    const a=dayFromKey(days[0]),b=dayFromKey(days[4]);
-    $('weeklbl').textContent=a.m===b.m?`${a.d}–${b.d} ${MON[a.m]}`:`${a.d} ${MON[a.m]} – ${b.d} ${MON[b.m]}`;
-    // статистика недели
-    let total=0,bot=0,man=0,free=0,bought=0,noshow=0;
-    for(const dk of days)for(const h of HOURS){const id=slotId(dk,h);const bk=bookings[id];
-      if(bk&&bk.name){total++;bk.source==='manager'?man++:bot++;if(bk.status==='bought')bought++;if(bk.status==='noshow')noshow++;}
-      else if(!isBlocked(id)&&slotStart(dk,h)>Date.now())free++;}
-    $('stats').replaceChildren(...[[`Записей`,total],[`из бота`,bot],[`от менеджеров`,man],[`свободно`,free],[`купили`,bought],[`не пришли`,noshow]].map(([k,v])=>el('span',{class:'stat tnum'},[el('b',{text:String(v)}),' '+k])));
-    const thead=el('thead',{},el('tr',{},[el('th',{class:'hr',text:'Время'}),...days.map(dk=>{
-      const n=HOURS.filter(h=>isBooked(slotId(dk,h))).length;
-      return el('th',{class:dk===tk?'today':''},[dayLabel(dk)+(dk===tk?' · сегодня':''),el('small',{class:'tnum',text:`${n} из ${HOURS.length}`})]);})]));
-    const tbody=el('tbody',{},HOURS.map(h=>el('tr',{},[
-      el('th',{class:'hr tnum',scope:'row'},[`${pad(h)}:00`,el('small',{text:sameTZ?'МСК':`МСК · у вас ${localTime(slotStart(days[0],h))}`})]),
-      ...days.map(dk=>el('td',{},cellFor(dk,h)))])));
-    $('week').replaceChildren(thead,tbody);
+  function result(){
+    track('quiz_done');
+    show(progress(4),el('div',{class:'msg result',text:F.scenarios[scenario(answers)].text}),
+      el('div',{class:'offer'},[el('h2',{text:F.offer.title}),el('p',{text:F.offer.text}),
+        el('button',{class:'btn big',type:'button',text:F.offer.button,onclick:slots})]),
+      el('button',{class:'back',type:'button',text:'← Пройти тест заново',onclick:()=>{answers={};step=0;question();}}));
   }
-  function cellFor(dk,h){
-    const id=slotId(dk,h),bk=bookings[id],past=slotStart(dk,h)<Date.now();
-    if(bk&&bk.name){const st=bk.status||'booked';
-      return el('button',{class:`cell ${st}`,type:'button',onclick:()=>openBooking(id)},[
-        el('span',{class:'nm',text:bk.name}),el('span',{class:'mt',text:bk.contact||''}),
-        el('span',{class:'row'},[el('span',{class:`pill ${bk.source==='manager'?'man':'bot'}`,text:bk.source==='manager'?'менеджер':'бот'}),st!=='booked'?el('span',{class:'mt',text:STATUS[st]}):null])]);}
-    if(isBlocked(id))return el('button',{class:'cell blocked',type:'button',onclick:()=>openBlocked(id)},[el('span',{class:'nm',text:'Закрыто'}),el('span',{class:'mt',text:blocked[id].reason||''})]);
-    if(past)return el('div',{class:'cell past','aria-label':'Прошло'});
-    return el('button',{class:'cell free',type:'button',onclick:()=>openFree(id),'aria-label':`Свободно, ${dayLabel(dk)} ${pad(h)}:00`},[el('span',{class:'plus',text:'+ записать'})]);
+  async function slots(){
+    try{const r=await fetch('/api/slots');if(!r.ok)throw 0;days=(await r.json()).days;}catch(e){show(el('p',{class:'err',text:'Не получилось загрузить свободное время. Обновите страницу.'}));return;}
+    renderSlots();
   }
-  $('prevw').onclick=()=>{state.weekStart=addDays(state.weekStart,-7);renderAdmin();};
-  $('nextw').onclick=()=>{state.weekStart=addDays(state.weekStart,7);renderAdmin();};
-  $('thisw').onclick=()=>{state.weekStart=mondayOf(todayKey());renderAdmin();};
-
-  // боковая панель
-  let lastFocus=null;
-  function openSheet(children){lastFocus=document.activeElement;$('sheet').replaceChildren(...children);$('panel').hidden=false;const f=$('sheet').querySelector('input,button');f&&f.focus();}
-  function closeSheet(){$('panel').hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
-  $('panel').addEventListener('click',e=>{if(e.target===$('panel'))closeSheet();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('panel').hidden)closeSheet();});
-  const head=(title,id)=>{const[dk,h]=splitId(id);return[el('h2',{id:'p-title',text:title}),el('p',{class:'when tnum',text:`${dayLabel(dk)}, ${pad(h)}:00–${pad(h+1)}:00 по Москве`})];};
-  const msg=()=>el('p',{class:'err',hidden:true});
-  const fail=(m,ex)=>{m.textContent=ex&&ex.code==='invalid_argument'?'Нет прав на изменение записей.':'Не сохранилось. Попробуйте ещё раз.';m.hidden=false;};
-
-  function openFree(id){
-    const name=el('input',{id:'a-name',required:true}),contact=el('input',{id:'a-contact',placeholder:'@username или +7…'}),note=el('textarea',{id:'a-note',rows:3}),reason=el('input',{id:'a-reason',placeholder:'например, эфир или выходной'}),m=msg();
-    const save=el('button',{class:'btn',type:'button',text:'Записать',onclick:async()=>{
-      if(!name.value.trim()){m.textContent='Укажите имя.';m.hidden=false;return;}
-      save.disabled=true;
-      try{const[dk,h]=splitId(id);const r=await claim(id,{date:dk,hour:h,name:name.value.trim(),contact:contact.value.trim(),note:note.value.trim(),source:'manager',status:'booked',createdAt:new Date().toISOString(),createdBy:myId||null});
-        if(r==='busy'){m.textContent='Это время только что заняли.';m.hidden=false;save.disabled=false;return;}closeSheet();}
-      catch(ex){fail(m,ex);save.disabled=false;}}});
-    const block=el('button',{class:'btn ghost',type:'button',text:'Закрыть это время',onclick:async()=>{
-      block.disabled=true;try{const[dk,h]=splitId(id);await db.doc('blocked/'+id).set({date:dk,hour:h,reason:reason.value.trim(),by:myId||null});closeSheet();}catch(ex){fail(m,ex);block.disabled=false;}}});
-    openSheet([...head('Свободное время',id),
-      el('div',{class:'field'},[el('label',{for:'a-name',text:'Имя'}),name]),
-      el('div',{class:'field'},[el('label',{for:'a-contact',text:'Telegram или телефон'}),contact]),
-      el('div',{class:'field'},[el('label',{for:'a-note',text:'Комментарий'}),note]),
-      m,el('div',{class:'row'},[save,el('button',{class:'btn ghost',type:'button',text:'Отмена',onclick:closeSheet})]),
-      el('hr',{style:'border:0;border-top:1px solid var(--line);width:100%;margin:6px 0'}),
-      el('div',{class:'field'},[el('label',{for:'a-reason',text:'Или закрыть время, чтобы никто не записался'}),reason]),
-      el('div',{},block)]);
+  const freeCount=d=>d.slots.filter(s=>s.free).length;
+  function renderSlots(){
+    if(!day||!days.find(d=>d.date===day)||!freeCount(days.find(d=>d.date===day)))day=(days.find(d=>freeCount(d))||days[0]||{}).date;
+    const cur=days.find(d=>d.date===day);
+    show(progress(5),el('div',{class:'msg',text:'Выберите удобный день и время — я позвоню вам по телефону. Звоню с понедельника по пятницу.'}),
+      el('p',{class:'label',text:'День'}),
+      el('div',{class:'days'},days.map(d=>{const n=freeCount(d);return el('button',{type:'button',class:'day','aria-pressed':String(d.date===day),disabled:!n,onclick:()=>{day=d.date;pick=null;renderSlots();}},[el('b',{text:dayLabel(d.date)}),el('small',{class:'tnum',text:n?`свободно: ${n}`:'всё занято'})]);})),
+      el('p',{class:'label',text:'Время'}),
+      el('div',{class:'times'},(cur?cur.slots:[]).map(s=>el('button',{type:'button',class:'time',disabled:!s.free,'aria-pressed':String(!!pick&&pick.date===day&&pick.hour===s.hour),onclick:()=>{pick={date:day,hour:s.hour,start:s.start};contacts();}},[
+        el('b',{class:'tnum',text:`${pad(s.hour)}:00 МСК`}),el('small',{class:'tnum',text:s.free?(sameTZ?'по Москве':`у вас ${loc(s.start)}`):'занято'})]))),
+      el('button',{class:'back',type:'button',text:'← Назад',onclick:result}));
+  }
+  function contacts(){
+    const name=el('input',{id:'f-name',autocomplete:'name',value:prefill.name}),phone=el('input',{id:'f-phone',type:'tel',autocomplete:'tel',placeholder:'+7 900 000-00-00',value:prefill.phone});
+    const web=el('input',{id:'f-web',tabindex:'-1',autocomplete:'off'}),consent=el('input',{type:'checkbox',id:'f-consent'}),err=el('p',{class:'err',hidden:true});
+    const go=el('button',{class:'btn big',type:'submit',text:'Записаться'});
+    const form=el('form',{class:'form',novalidate:true},[
+      el('p',{style:'margin:0'},['Вы выбрали: ',el('b',{class:'tnum',text:`${dayLabel(pick.date)}, ${pad(pick.hour)}:00 по Москве`}),sameTZ?null:el('span',{class:'tnum',text:` (у вас ${locDay(pick.start)}, ${loc(pick.start)})`})]),
+      el('div',{class:'field'},[el('label',{for:'f-name',text:'Как к вам обращаться'}),name]),
+      el('div',{class:'field'},[el('label',{for:'f-phone',text:'Телефон для звонка'}),phone]),
+      el('div',{class:'hp','aria-hidden':'true'},[el('label',{for:'f-web',text:'Не заполняйте'}),web]),
+      el('label',{class:'check'},[consent,el('span',{},['Согласна(ен) на обработку персональных данных. ',el('a',{href:F.privacy_url,target:'_blank',rel:'noopener',text:'Документ'})])]),
+      err,go]);
+    form.addEventListener('submit',async e=>{
+      e.preventDefault();err.hidden=true;
+      const b={date:pick.date,hour:pick.hour,name:name.value.trim(),phone:phone.value.trim(),consent:consent.checked,website:web.value,quiz:answers};
+      if(!b.name||!b.phone){err.textContent='Укажите имя и телефон.';err.hidden=false;return;}
+      if(!b.consent){err.textContent='Отметьте согласие на обработку данных — без него записать не получится.';err.hidden=false;return;}
+      go.disabled=true;
+      try{
+        const r=await fetch('/api/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok){err.textContent=j.error||'Не получилось записаться. Попробуйте ещё раз.';err.hidden=false;if(r.status===409){pick=null;setTimeout(slots,1500);}return;}
+        done(j);
+      }catch(ex){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';err.hidden=false;}
+      finally{go.disabled=false;}
+    });
+    show(progress(5),form,el('button',{class:'back',type:'button',text:'← Выбрать другое время',onclick:renderSlots}));
+    setTimeout(()=>(name.value?phone:name).focus(),0);
+  }
+  function done(j){
+    const ig=/Instagram/i.test(navigator.userAgent);
+    show(el('div',{class:'done'},[el('h2',{text:'Вы записаны'}),
+      el('p',{class:'tnum',style:'margin:0;font-weight:600',text:`${dayLabel(j.date)}, ${pad(j.hour)}:00 по Москве`+(sameTZ?'':` — у вас ${locDay(j.start)}, ${loc(j.start)}`)}),
+      el('div',{class:'msg',text:F.done}),
+      el('p',{class:'note',text:'Добавьте звонок в календарь телефона — он напомнит за час.'}),
+      el('div',{class:'row'},[el('a',{class:'btn',href:j.ics,text:'Добавить в календарь'}),el('a',{class:'btn ghost',href:j.gcal,target:'_blank',rel:'noopener',text:'Google Календарь'})]),
+      ig?el('p',{class:'note',html:'Если календарь не открылся, нажмите <b>⋯</b> в правом верхнем углу и выберите «Открыть в браузере» — затем снова «Добавить в календарь».'}):null]));
   }
 
-  async function openBooking(id){
-    const bk=bookings[id];if(!bk)return;
-    let who='—';
-    if(bk.createdBy&&user){try{const ps=await user.profiles([bk.createdBy]);who=(ps[bk.createdBy]&&ps[bk.createdBy].name)||'Участник'}catch(e){}}
-    const m=msg(),st=bk.status||'booked';
-    const statusBtns=el('div',{class:'statusset'},Object.entries(STATUS).map(([k,v])=>el('button',{type:'button','aria-pressed':String(k===st),text:v,onclick:async(ev)=>{
-      try{await db.doc('bookings/'+id).update({status:k});statusBtns.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===ev.currentTarget)));}catch(ex){fail(m,ex);}}})));
-    const conf=el('div',{class:'confirm',hidden:true},[el('span',{text:'Отменить запись? Время снова станет свободным.'}),el('div',{class:'row'},[
-      el('button',{class:'btn danger',type:'button',text:'Да, отменить',onclick:async()=>{try{await db.doc('bookings/'+id).delete();closeSheet();}catch(ex){fail(m,ex);}}}),
-      el('button',{class:'btn ghost',type:'button',text:'Нет',onclick:()=>{conf.hidden=true;}})])]);
-    const created=bk.createdAt?new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Moscow'}).format(new Date(bk.createdAt))+' МСК':'—';
-    openSheet([...head(bk.name,id),
-      el('dl',{class:'kv'},[el('dt',{text:'Контакт'}),el('dd',{text:bk.contact||'—'}),
-        el('dt',{text:'Источник'}),el('dd',{text:bk.source==='manager'?'добавил менеджер':'записался сам по ссылке'}),
-        bk.source==='manager'?el('dt',{text:'Кто добавил'}):null,bk.source==='manager'?el('dd',{text:who}):null,
-        el('dt',{text:'Запрос'}),el('dd',{text:bk.note||'—'}),
-        el('dt',{text:'Создано'}),el('dd',{class:'tnum',text:created})]),
-      el('div',{class:'field'},[el('label',{text:'Итог консультации'}),statusBtns]),
-      m,el('div',{class:'row'},[el('button',{class:'btn danger',type:'button',text:'Отменить запись',onclick:()=>{conf.hidden=false;}}),el('button',{class:'btn ghost',type:'button',text:'Закрыть',onclick:closeSheet})]),conf]);
-  }
-
-  function openBlocked(id){
-    const m=msg();
-    openSheet([...head('Время закрыто',id),el('p',{text:blocked[id].reason?`Причина: ${blocked[id].reason}`:'Причина не указана.'}),m,
-      el('div',{class:'row'},[el('button',{class:'btn',type:'button',text:'Открыть для записи',onclick:async()=>{try{await db.doc('blocked/'+id).delete();closeSheet();}catch(ex){fail(m,ex);}}}),
-        el('button',{class:'btn ghost',type:'button',text:'Закрыть панель',onclick:closeSheet})])]);
-  }
-
-  function render(){state.mode==='admin'?renderAdmin():renderLead();}
-
-  // ----- подключение к базе -----
-  if(location.hash==='#admin')setMode('admin');else render();
-  setInterval(render,60e3); // прошедшие слоты гаснут сами
   (async()=>{
-    const c=window.claude;
-    db=c&&c.use?await c.use('db'):null;
-    user=c&&c.use?await c.use('user'):null;
-    if(user){try{myId=await user.id();}catch(e){}}
-    if(!db){$('nodb').hidden=false;return;}
-    const sub=(col,target)=>db.collection(col).where('date','>=',addDays(todayKey(),-35)).onSnapshot(s=>{
-      const next={};s.docs.forEach(d=>{if(d.exists)next[d.id]=d.data();});
-      if(target==='b')bookings=next;else blocked=next;render();
-      if(!$('panel').hidden&&$('sheet').dataset.live){} },()=>{$('nodb').hidden=false;});
-    sub('bookings','b');sub('blocked','x');
+    try{const r=await fetch('/api/funnel');if(!r.ok)throw 0;F=await r.json();}catch(e){$('loading').hidden=true;$('loaderr').hidden=false;return;}
+    $('loading').hidden=true;$('expert').textContent=F.expert;$('ava').textContent=F.expert.split(' ').map(w=>w[0]).join('').slice(0,2);
+    track('open');greeting();
   })();
 })();
 </script>
-
 </body>
 </html>

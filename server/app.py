@@ -8,7 +8,7 @@
 Хранилище — SQLite-файл в папке DATA_DIR (по умолчанию ./data).
 Настройки — переменные окружения, см. README.md.
 """
-import os, re, sqlite3, secrets, time, datetime as dt
+import os, re, json, sqlite3, secrets, time, datetime as dt
 from functools import wraps
 from urllib.parse import quote
 from flask import Flask, g, request, jsonify, session, redirect, send_from_directory, Response, abort
@@ -25,6 +25,27 @@ LEAD_MINUTES = int(os.environ.get("LEAD_MINUTES", "60"))
 SLOT_MINUTES = int(os.environ.get("SLOT_MINUTES", "60"))
 EVENT_TITLE = os.environ.get("EVENT_TITLE", "Консультация")
 MSK = dt.timezone(dt.timedelta(hours=3), "MSK")
+with open(os.path.join(os.path.dirname(__file__), "funnel.json"), encoding="utf-8") as _f:
+    FUNNEL = json.load(_f)
+QUESTIONS = {q["id"]: {o["id"]: o for o in q["options"]} for q in FUNNEL["questions"]}
+FUNNEL_EVENTS = ("open", "start", "quiz_done")
+
+def scenario_for(a):
+    """Какой персональный ответ показать: логика из документа «Цепочка чат-бота»."""
+    if a.get("debt") != "gt500":
+        return "s7"
+    return {("yes", "official"): "s1", ("no", "none"): "s2", ("yes", "business"): "s3",
+            ("yes", "none"): "s4", ("no", "official"): "s5", ("no", "business"): "s6"}[(a["property"], a["work"])]
+
+def clean_quiz(raw):
+    """Проверяет ответы теста; возвращает словарь для CRM или None."""
+    if not isinstance(raw, dict): return None
+    a = {k: raw.get(k) for k in QUESTIONS}
+    if any(a[k] not in QUESTIONS[k] for k in QUESTIONS): return None
+    sc = scenario_for(a)
+    return {"answers": a, "scenario": sc, "scenario_title": FUNNEL["scenarios"][sc]["title"],
+            "summary": " · ".join(QUESTIONS[k][a[k]]["short"] for k in QUESTIONS)}
+
 STATUSES = {"booked": "Записан", "came": "Пришёл", "noshow": "Не пришёл", "bought": "Купил", "cancelled": "Отменён"}
 
 app = Flask(__name__, static_folder=None)
@@ -64,6 +85,8 @@ CREATE TABLE IF NOT EXISTS bookings(
 CREATE UNIQUE INDEX IF NOT EXISTS bookings_one_per_slot ON bookings(slot) WHERE status != 'cancelled';
 CREATE INDEX IF NOT EXISTS bookings_date ON bookings(date);
 CREATE INDEX IF NOT EXISTS bookings_client ON bookings(client_id);
+CREATE TABLE IF NOT EXISTS events(
+  sid TEXT NOT NULL, event TEXT NOT NULL, day TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(sid, event));
 CREATE TABLE IF NOT EXISTS blocked(
   slot TEXT PRIMARY KEY, date TEXT NOT NULL, hour INTEGER NOT NULL, reason TEXT DEFAULT '', by INTEGER);
 """
@@ -84,6 +107,10 @@ def _close(_):
 def init_db():
     c = sqlite3.connect(DB_PATH)
     c.executescript(SCHEMA)
+    for table in ("bookings", "clients"):  # миграция: ответы теста
+        cols = {r[1] for r in c.execute(f"PRAGMA table_info({table})")}
+        if "quiz" not in cols:
+            c.execute(f"ALTER TABLE {table} ADD COLUMN quiz TEXT DEFAULT ''")
     # первичные пользователи из окружения: ADMIN_USERS="login:пароль:Имя;login2:пароль2:Имя2"
     for item in filter(None, os.environ.get("ADMIN_USERS", "").split(";")):
         parts = item.split(":", 2)
@@ -147,16 +174,19 @@ def upsert_client(name, phone, instagram):
     return c.execute("INSERT INTO clients(phone,name,instagram,status,created_at,updated_at) VALUES(?,?,?,?,?,?)",
                      (phone, name, instagram, "booked", t, t)).lastrowid
 
-def create_booking(date, hour, name, phone, instagram, note, source, user_id=None):
+def create_booking(date, hour, name, phone, instagram, note, source, user_id=None, quiz=None):
     c = db()
     try:
         c.execute("BEGIN IMMEDIATE")
         cid = upsert_client(name, phone, instagram)
         token = secrets.token_urlsafe(12)
-        c.execute("INSERT INTO bookings(slot,date,hour,client_id,note,source,status,token,created_at,created_by)"
-                  " VALUES(?,?,?,?,?,?,?,?,?,?)",
-                  (slot_id(date, hour), date, hour, cid, note, source, "booked", token, iso_now(), user_id))
+        q = json.dumps(quiz, ensure_ascii=False) if quiz else ""
+        c.execute("INSERT INTO bookings(slot,date,hour,client_id,note,source,status,token,created_at,created_by,quiz)"
+                  " VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                  (slot_id(date, hour), date, hour, cid, note, source, "booked", token, iso_now(), user_id, q))
         c.execute("UPDATE clients SET status='booked', updated_at=? WHERE id=?", (iso_now(), cid))
+        if q:
+            c.execute("UPDATE clients SET quiz=? WHERE id=?", (q, cid))
         c.commit()
         return token
     except sqlite3.IntegrityError:
@@ -212,6 +242,21 @@ def page_privacy(): return send_from_directory(STATIC, "privacy.html")
 @app.get("/static/<path:name>")
 def static_files(name): return send_from_directory(STATIC, name)
 
+@app.get("/api/funnel")
+def api_funnel():
+    return jsonify(FUNNEL)
+
+@app.post("/api/track")
+def api_track():
+    b = body()
+    sid, ev = str(b.get("sid") or "")[:40], b.get("event")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{8,40}", sid) or ev not in FUNNEL_EVENTS or rate_limited("track:" + client_ip(), 120, 3600):
+        return jsonify(ok=False), 400
+    db().execute("INSERT OR IGNORE INTO events(sid,event,day,created_at) VALUES(?,?,?,?)",
+                 (sid, ev, today_msk().isoformat(), iso_now()))
+    db().commit()
+    return jsonify(ok=True)
+
 @app.get("/api/slots")
 def api_slots():
     c = db()
@@ -246,9 +291,10 @@ def api_book():
     if not phone: return jsonify(error="Проверьте номер телефона: нужен номер с кодом страны или из 10–11 цифр."), 400
     if not b.get("consent"): return jsonify(error="Отметьте согласие на обработку данных — без него записать не получится."), 400
     if not isinstance(hour, int): return jsonify(error="Выберите время."), 400
+    quiz = clean_quiz(b.get("quiz")) if b.get("quiz") else None
     problem = slot_problem(date, hour)
     if problem: return jsonify(error=problem), 409
-    token = create_booking(date, hour, name, phone, ig, note, "bot")
+    token = create_booking(date, hour, name, phone, ig, note, "bot", quiz=quiz)
     if not token: return jsonify(error="Это время только что заняли. Выберите другое."), 409
     return jsonify(ok=True, **event_payload(date, hour, token))
 
@@ -314,6 +360,7 @@ def me(): return jsonify(name=session.get("name"), hours=HOURS, workdays=WORKDAY
 def booking_row(r):
     return {"id": r["id"], "slot": r["slot"], "date": r["date"], "hour": r["hour"], "status": r["status"],
             "source": r["source"], "note": r["note"], "created_at": r["created_at"], "created_by": r["created_by_name"],
+            "quiz": json.loads(r["quiz"]) if r["quiz"] else None,
             "client": {"id": r["client_id"], "name": r["name"], "phone": r["phone"], "instagram": r["instagram"]}}
 
 BOOKING_SQL = ("SELECT b.*, c.name, c.phone, c.instagram, u.name AS created_by_name FROM bookings b "
@@ -402,6 +449,7 @@ def clients():
     rows = db().execute(sql, args).fetchall()
     return jsonify(clients=[{"id": r["id"], "name": r["name"], "phone": r["phone"], "instagram": r["instagram"],
                              "status": r["status"], "notes": r["notes"], "visits": r["visits"], "last_slot": r["last_slot"],
+                             "quiz": json.loads(r["quiz"]) if r["quiz"] else None,
                              "created_at": r["created_at"]} for r in rows])
 
 @app.get("/api/admin/clients/<int:cid>")
@@ -411,7 +459,18 @@ def client(cid):
     r = c.execute("SELECT * FROM clients WHERE id=?", (cid,)).fetchone()
     if not r: return jsonify(error="Клиент не найден."), 404
     hist = c.execute(BOOKING_SQL + "WHERE b.client_id=? ORDER BY b.date DESC, b.hour DESC", (cid,)).fetchall()
-    return jsonify(client=dict(r), bookings=[booking_row(h) for h in hist])
+    cl = dict(r); cl["quiz"] = json.loads(r["quiz"]) if r["quiz"] else None
+    return jsonify(client=cl, bookings=[booking_row(h) for h in hist])
+
+@app.get("/api/admin/stats")
+@login_required(api=True)
+def stats():
+    days = max(1, min(int(request.args.get("days", "7") or 7), 365))
+    since = (today_msk() - dt.timedelta(days=days - 1)).isoformat()
+    c = db()
+    counts = {e: c.execute("SELECT COUNT(*) FROM events WHERE event=? AND day>=?", (e, since)).fetchone()[0] for e in FUNNEL_EVENTS}
+    counts["booked"] = c.execute("SELECT COUNT(*) FROM bookings WHERE source='bot' AND substr(created_at,1,10)>=?", (since,)).fetchone()[0]
+    return jsonify(days=days, **counts)
 
 @app.patch("/api/admin/clients/<int:cid>")
 @login_required(api=True)
