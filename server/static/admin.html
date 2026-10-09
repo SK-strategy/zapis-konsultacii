@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Админка консультаций</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+.top{max-width:1180px;margin:0 auto;padding-block:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.brand{font:600 16px/1.2 var(--f-display)}
+.seg{display:inline-flex;background:var(--sunk);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:999px;color:var(--muted);font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgb(0 0 0 / .08)}
+.who{font-size:13px;color:var(--muted)}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 0;display:grid;gap:16px}
+.ahead{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
+.ahead h1{font-size:22px}
+.weeknav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.weeknav button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
+.weeknav .lbl{min-width:140px;text-align:center;font-weight:500}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px}.stat b{font-weight:600}
+.gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table.week{border-collapse:collapse;width:100%;min-width:760px}
+.week th,.week td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:0;vertical-align:top}
+.week tr>*:last-child{border-right:0}.week tbody tr:last-child>*{border-bottom:0}
+.week thead th{padding:10px;text-align:left;font-weight:600;font-size:14px;background:var(--sunk)}
+.week thead th small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.week thead th.today{color:var(--accent)}
+.week th.hr{width:92px;padding:10px;font-weight:600;text-align:left;font-size:14px;background:var(--sunk)}
+.week th.hr small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.cell{display:grid;width:100%;min-height:64px;border:0;background:none;text-align:left;padding:8px 10px;gap:2px;align-content:start}
+.cell:hover{background:var(--sunk)}
+.cell .nm{font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.cell .mt{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.cell .plus{color:var(--muted);font-size:13px}
+.cell.past{background:repeating-linear-gradient(135deg,transparent 0 6px,var(--sunk) 6px 7px);cursor:default}
+.cell.blocked{background:var(--sunk)}.cell.blocked .nm{color:var(--blk);font-weight:500}
+.cell.booked{border-left:4px solid var(--accent)}.cell.came{border-left:4px solid var(--ok)}
+.cell.bought{border-left:4px solid var(--ok);background:var(--ok-soft)}.cell.noshow{border-left:4px solid var(--bad);background:var(--bad-soft)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters input{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;min-width:0;flex:1 1 240px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button,.statusset button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px}
+.chips button[aria-pressed="true"],.statusset button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+table.crm{border-collapse:collapse;width:100%;min-width:720px}
+.crm th{text-align:left;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:10px 12px;background:var(--sunk);border-bottom:1px solid var(--line)}
+.crm td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+.crm tbody tr{cursor:pointer}.crm tbody tr:hover{background:var(--sunk)}
+.crm tbody tr:last-child td{border-bottom:0}
+.crm .nm{font-weight:600}.crm .mt{color:var(--muted);font-size:12px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.panel{position:fixed;inset:0;display:grid;justify-items:end;background:rgb(0 0 0 / .35);z-index:5}
+.sheet{width:min(440px,100%);height:100%;background:var(--surface);padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px));overflow-y:auto;display:grid;gap:14px;align-content:start;border-left:1px solid var(--line)}
+.sheet h2{font:600 19px/1.3 var(--f-display);margin:0;overflow-wrap:anywhere}
+.when{color:var(--muted);margin:-8px 0 0;font-size:14px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:14px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
+.statusset{display:flex;flex-wrap:wrap;gap:6px}
+.confirm{background:var(--bad-soft);border-radius:10px;padding:12px;display:grid;gap:8px;font-size:14px}
+.hist{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.hist li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px}
+hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
+.copy{border:0;background:none;color:var(--accent);padding:0;font-size:13px}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(24px);opacity:.6}}}
+</style>
+</head><body>
+<header class="top">
+  <span class="brand">Консультации</span>
+  <div class="seg" role="group" aria-label="Раздел">
+    <button id="t-sched" aria-pressed="true">Расписание</button>
+    <button id="t-crm" aria-pressed="false">Клиенты</button>
+  </div>
+  <div class="row"><span class="who" id="who"></span><button class="btn ghost small" id="logout">Выйти</button></div>
+</header>
+
+<main class="wrap" id="v-sched">
+  <div class="ahead">
+    <div><h1>Расписание</h1><p class="sub">Будни по Москве. Нажмите на ячейку, чтобы записать человека, открыть запись или закрыть время.</p></div>
+    <div class="weeknav"><button id="prevw" aria-label="Предыдущая неделя">←</button><span class="lbl tnum" id="weeklbl"></span><button id="nextw" aria-label="Следующая неделя">→</button><button id="thisw">Сегодня</button></div>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="gridwrap"><table class="week" id="week"></table></div>
+</main>
+
+<main class="wrap" id="v-crm" hidden>
+  <div class="ahead"><div><h1>Клиенты</h1><p class="sub">Все, кто записывался сам или кого добавил менеджер. Клиент определяется по телефону.</p></div></div>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Поиск по имени, телефону, Telegram, заметкам" aria-label="Поиск клиентов">
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="gridwrap"><table class="crm" id="crm"></table></div>
+</main>
+
+<div class="panel" id="panel" hidden><aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="p-title"></aside></div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const el=(t,a={},k=[])=>{const n=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')n.className=v;else if(x==='text')n.textContent=v;else if(x.startsWith('on'))n.addEventListener(x.slice(2),v);else if(v===true)n.setAttribute(x,'');else if(v!==false&&v!=null)n.setAttribute(x,v);}for(const c of[].concat(k))if(c!=null)n.append(c);return n;};
+  const pad=n=>String(n).padStart(2,'0');
+  const WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],MON=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  const MSK=3*3600e3;
+  let HOURS=[6,7,8,9,10,11,12],WORK=[0,1,2,3,4],STATUS={};
+  const ORDER=['booked','came','noshow','bought'];
+
+  async function api(path,opt={}){
+    const r=await fetch(path,{...opt,headers:{'Content-Type':'application/json','X-Requested-With':'fetch',...(opt.headers||{})},body:opt.body?JSON.stringify(opt.body):undefined});
+    if(r.status===401){location.href='/admin/login';throw new Error('auth');}
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.error||'Не сохранилось. Попробуйте ещё раз.');
+    return j;
+  }
+  // даты (по Москве)
+  const dk=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
+  const todayKey=()=>{const t=new Date(Date.now()+MSK);return dk(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate());};
+  const parts=s=>{const[y,m,d]=s.split('-').map(Number);const t=new Date(Date.UTC(y,m-1,d));return{y,m:m-1,d,wd:t.getUTCDay()};};
+  const add=(s,n)=>{const[y,m,d]=s.split('-').map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return dk(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate());};
+  const monday=s=>add(s,-((parts(s).wd+6)%7));
+  const start=(s,h)=>{const[y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d,h)-MSK;};
+  const dayLabel=s=>{const p=parts(s);return`${WD[p.wd]}, ${p.d} ${MON[p.m]}`;};
+  const slotLabel=(s,h)=>`${dayLabel(s)}, ${pad(h)}:00 МСК`;
+  const stPill=st=>el('span',{class:'st st-'+st,text:STATUS[st]||st});
+  const fmtPhone=p=>{const d=(p||'').replace(/\D/g,'');return d.length===11&&d[0]==='7'?`+7 ${d.slice(1,4)} ${d.slice(4,7)}-${d.slice(7,9)}-${d.slice(9)}`:p;};
+
+  // ---------- панель ----------
+  let lastFocus=null;
+  function openSheet(kids){lastFocus=document.activeElement;$('sheet').replaceChildren(...kids);$('panel').hidden=false;const f=$('sheet').querySelector('input,textarea,button');f&&f.focus();}
+  function closeSheet(){$('panel').hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
+  $('panel').addEventListener('click',e=>{if(e.target===$('panel'))closeSheet();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('panel').hidden)closeSheet();});
+  const msg=()=>el('p',{class:'err',hidden:true});
+  const show=(m,e)=>{m.textContent=e.message;m.hidden=false;};
+  const fld=(id,label,input)=>el('div',{class:'field'},[el('label',{for:id,text:label}),input]);
+  const copyBtn=text=>el('button',{class:'copy',type:'button',text:'копировать',onclick:async ev=>{try{await navigator.clipboard.writeText(text);ev.target.textContent='скопировано';}catch(e){}}});
+
+  // ---------- расписание ----------
+  let week=null,data={bookings:[],blocked:{}};
+  async function loadWeek(){data=await api('/api/admin/week?start='+week);renderWeek();}
+  function renderWeek(){
+    const days=[0,1,2,3,4,5,6].map(i=>add(week,i)).filter(s=>WORK.includes((parts(s).wd+6)%7));
+    const a=parts(days[0]),b=parts(days[days.length-1]),tk=todayKey();
+    $('weeklbl').textContent=a.m===b.m?`${a.d}–${b.d} ${MON[a.m]}`:`${a.d} ${MON[a.m]} – ${b.d} ${MON[b.m]}`;
+    const by={};data.bookings.forEach(x=>by[x.slot]=x);
+    let total=0,bot=0,man=0,free=0,bought=0,noshow=0;
+    for(const s of days)for(const h of HOURS){const id=`${s}_${pad(h)}`,x=by[id];
+      if(x){total++;x.source==='manager'?man++:bot++;if(x.status==='bought')bought++;if(x.status==='noshow')noshow++;}
+      else if(!(id in data.blocked)&&start(s,h)>Date.now())free++;}
+    $('stats').replaceChildren(...[['записей',total],['из бота',bot],['от менеджеров',man],['свободно',free],['купили',bought],['не пришли',noshow]].map(([k,v])=>el('span',{class:'stat tnum'},[el('b',{text:String(v)}),' '+k])));
+    const head=el('thead',{},el('tr',{},[el('th',{class:'hr',text:'Время'}),...days.map(s=>el('th',{class:s===tk?'today':''},[dayLabel(s)+(s===tk?' · сегодня':''),el('small',{class:'tnum',text:`${HOURS.filter(h=>by[`${s}_${pad(h)}`]).length} из ${HOURS.length}`})]))]));
+    const bodyRows=el('tbody',{},HOURS.map(h=>el('tr',{},[el('th',{class:'hr tnum',scope:'row'},[`${pad(h)}:00`,el('small',{text:'МСК'})]),...days.map(s=>el('td',{},cell(s,h,by)))])));
+    $('week').replaceChildren(head,bodyRows);
+  }
+  function cell(s,h,by){
+    const id=`${s}_${pad(h)}`,x=by[id],past=start(s,h)<Date.now();
+    if(x)return el('button',{class:'cell '+x.status,type:'button',onclick:()=>openBooking(x)},[
+      el('span',{class:'nm',text:x.client.name}),el('span',{class:'mt',text:fmtPhone(x.client.phone)}),
+      el('span',{class:'row'},[el('span',{class:'pill '+(x.source==='manager'?'man':'bot'),text:x.source==='manager'?'менеджер':'бот'}),x.status!=='booked'?el('span',{class:'mt',text:STATUS[x.status]}):null])]);
+    if(id in data.blocked)return el('button',{class:'cell blocked',type:'button',onclick:()=>openBlocked(s,h)},[el('span',{class:'nm',text:'Закрыто'}),el('span',{class:'mt',text:data.blocked[id]||''})]);
+    if(past)return el('div',{class:'cell past','aria-label':'Прошло'});
+    return el('button',{class:'cell',type:'button','aria-label':'Свободно, '+slotLabel(s,h),onclick:()=>openFree(s,h)},[el('span',{class:'plus',text:'+ записать'})]);
+  }
+  $('prevw').onclick=()=>{week=add(week,-7);loadWeek();};
+  $('nextw').onclick=()=>{week=add(week,7);loadWeek();};
+  $('thisw').onclick=()=>{week=monday(todayKey());loadWeek();};
+
+  function openFree(s,h){
+    const n=el('input',{id:'a-n'}),p=el('input',{id:'a-p',type:'tel',placeholder:'+7 900 000-00-00'}),t=el('input',{id:'a-t',placeholder:'@username'}),c=el('textarea',{id:'a-c',rows:3}),r=el('input',{id:'a-r',placeholder:'например, эфир или выходной'}),m=msg();
+    const save=el('button',{class:'btn',type:'button',text:'Записать',onclick:async()=>{save.disabled=true;try{await api('/api/admin/bookings',{method:'POST',body:{date:s,hour:h,name:n.value,phone:p.value,telegram:t.value,note:c.value}});closeSheet();loadWeek();}catch(e){show(m,e);save.disabled=false;}}});
+    const blk=el('button',{class:'btn ghost',type:'button',text:'Закрыть это время',onclick:async()=>{blk.disabled=true;try{await api('/api/admin/blocked',{method:'POST',body:{date:s,hour:h,reason:r.value}});closeSheet();loadWeek();}catch(e){show(m,e);blk.disabled=false;}}});
+    openSheet([el('h2',{id:'p-title',text:'Записать на консультацию'}),el('p',{class:'when tnum',text:slotLabel(s,h)}),
+      fld('a-n','Имя',n),fld('a-p','Телефон',p),fld('a-t','Telegram (необязательно)',t),fld('a-c','Комментарий',c),m,
+      el('div',{class:'row'},[save,el('button',{class:'btn ghost',type:'button',text:'Отмена',onclick:closeSheet})]),
+      el('hr',{class:'sep'}),fld('a-r','Или закрыть время, чтобы никто не записался',r),el('div',{},blk)]);
+  }
+  function openBlocked(s,h){
+    const m=msg(),id=`${s}_${pad(h)}`;
+    openSheet([el('h2',{id:'p-title',text:'Время закрыто'}),el('p',{class:'when tnum',text:slotLabel(s,h)}),el('p',{text:data.blocked[id]?`Причина: ${data.blocked[id]}`:'Причина не указана.'}),m,
+      el('div',{class:'row'},[el('button',{class:'btn',type:'button',text:'Открыть для записи',onclick:async()=>{try{await api('/api/admin/blocked/'+id,{method:'DELETE'});closeSheet();loadWeek();}catch(e){show(m,e);}}}),el('button',{class:'btn ghost',type:'button',text:'Закрыть панель',onclick:closeSheet})])]);
+  }
+  function statusButtons(cur,onPick){
+    const box=el('div',{class:'statusset'},ORDER.map(k=>el('button',{type:'button','aria-pressed':String(k===cur),text:STATUS[k],onclick:async ev=>{const b=ev.currentTarget;try{await onPick(k);box.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}catch(e){}}})));
+    return box;
+  }
+  function openBooking(x){
+    const m=msg();
+    const conf=el('div',{class:'confirm',hidden:true},[el('span',{text:'Отменить запись? Время снова станет свободным, запись останется в истории клиента.'}),el('div',{class:'row'},[
+      el('button',{class:'btn danger',type:'button',text:'Да, отменить',onclick:async()=>{try{await api('/api/admin/bookings/'+x.id,{method:'PATCH',body:{status:'cancelled'}});closeSheet();loadWeek();}catch(e){show(m,e);}}}),
+      el('button',{class:'btn ghost',type:'button',text:'Нет',onclick:()=>{conf.hidden=true;}})])]);
+    openSheet([el('h2',{id:'p-title',text:x.client.name}),el('p',{class:'when tnum',text:slotLabel(x.date,x.hour)}),
+      el('dl',{class:'kv'},[el('dt',{text:'Телефон'}),el('dd',{class:'tnum'},[fmtPhone(x.client.phone),' ',copyBtn(x.client.phone)]),
+        el('dt',{text:'Telegram'}),el('dd',{text:x.client.telegram||'—'}),
+        el('dt',{text:'Источник'}),el('dd',{text:x.source==='manager'?`добавил менеджер${x.created_by?' ('+x.created_by+')':''}`:'записался сам по ссылке'}),
+        el('dt',{text:'Запрос'}),el('dd',{text:x.note||'—'})]),
+      el('div',{class:'field'},[el('label',{text:'Итог консультации'}),statusButtons(x.status,async k=>{try{await api('/api/admin/bookings/'+x.id,{method:'PATCH',body:{status:k}});x.status=k;loadWeek();}catch(e){show(m,e);throw e;}})]),
+      m,el('div',{class:'row'},[el('button',{class:'btn ghost',type:'button',text:'Карточка клиента',onclick:()=>openClient(x.client.id)}),el('button',{class:'btn danger',type:'button',text:'Отменить запись',onclick:()=>{conf.hidden=false;}})]),conf]);
+  }
+
+  // ---------- клиенты ----------
+  let fStatus='',qTimer=null;
+  function renderChips(){$('chips').replaceChildren(...[['','Все'],...ORDER.map(k=>[k,STATUS[k]])].map(([k,v])=>el('button',{type:'button','aria-pressed':String(k===fStatus),text:v,onclick:()=>{fStatus=k;renderChips();loadClients();}})));}
+  $('q').addEventListener('input',()=>{clearTimeout(qTimer);qTimer=setTimeout(loadClients,250);});
+  async function loadClients(){
+    const j=await api('/api/admin/clients?q='+encodeURIComponent($('q').value)+'&status='+fStatus);
+    const head=el('thead',{},el('tr',{},['Клиент','Телефон','Telegram','Статус','Консультаций','Последняя запись'].map(t=>el('th',{text:t}))));
+    if(!j.clients.length){$('crm').replaceChildren(head,el('tbody',{},el('tr',{},el('td',{colspan:6,class:'empty',text:$('q').value||fStatus?'Никого не нашлось. Измените поиск или фильтр.':'Клиентов пока нет. Они появятся после первой записи.'}))));return;}
+    $('crm').replaceChildren(head,el('tbody',{},j.clients.map(c=>el('tr',{tabindex:0,onclick:()=>openClient(c.id),onkeydown:e=>{if(e.key==='Enter')openClient(c.id);}},[
+      el('td',{},[el('div',{class:'nm',text:c.name}),c.notes?el('div',{class:'mt',text:c.notes.slice(0,60)+(c.notes.length>60?'…':'')}):null]),
+      el('td',{class:'tnum',text:fmtPhone(c.phone)}),el('td',{text:c.telegram||'—'}),el('td',{},stPill(c.status)),
+      el('td',{class:'tnum',text:String(c.visits)}),el('td',{class:'tnum',text:c.last_slot?slotLabel(c.last_slot.slice(0,10),+c.last_slot.slice(11)):'—'})]))));
+  }
+  async function openClient(id){
+    let j;try{j=await api('/api/admin/clients/'+id);}catch(e){return;}
+    const c=j.client,m=msg();
+    const n=el('input',{id:'c-n',value:c.name}),t=el('input',{id:'c-t',value:c.telegram||''}),notes=el('textarea',{id:'c-notes',rows:4});notes.value=c.notes||'';
+    const save=el('button',{class:'btn',type:'button',text:'Сохранить',onclick:async()=>{save.disabled=true;try{await api('/api/admin/clients/'+id,{method:'PATCH',body:{name:n.value,telegram:t.value,notes:notes.value}});save.textContent='Сохранено';setTimeout(()=>save.textContent='Сохранить',1500);refresh();}catch(e){show(m,e);}finally{save.disabled=false;}}});
+    openSheet([el('h2',{id:'p-title',text:c.name}),
+      el('dl',{class:'kv'},[el('dt',{text:'Телефон'}),el('dd',{class:'tnum'},[fmtPhone(c.phone),' ',copyBtn(c.phone)]),el('dt',{text:'В базе с'}),el('dd',{class:'tnum',text:new Date(c.created_at).toLocaleDateString('ru-RU')})]),
+      el('div',{class:'field'},[el('label',{text:'Статус клиента'}),statusButtons(c.status,async k=>{try{await api('/api/admin/clients/'+id,{method:'PATCH',body:{status:k}});refresh();}catch(e){show(m,e);throw e;}})]),
+      fld('c-n','Имя',n),fld('c-t','Telegram',t),fld('c-notes','Заметки менеджера',notes),m,el('div',{class:'row'},[save,el('button',{class:'btn ghost',type:'button',text:'Закрыть',onclick:closeSheet})]),
+      el('hr',{class:'sep'}),el('div',{class:'field'},[el('label',{text:`История записей (${j.bookings.length})`}),
+        j.bookings.length?el('ul',{class:'hist'},j.bookings.map(b=>el('li',{},[el('span',{class:'tnum',text:slotLabel(b.date,b.hour)}),el('span',{class:'row'},[el('span',{class:'pill '+(b.source==='manager'?'man':'bot'),text:b.source==='manager'?'менеджер':'бот'}),stPill(b.status)])]))):el('p',{class:'note',text:'Записей нет.'})])]);
+  }
+  function refresh(){if(!$('v-crm').hidden)loadClients();else loadWeek();}
+
+  // ---------- вкладки ----------
+  function tab(name){
+    $('t-sched').setAttribute('aria-pressed',name==='sched');$('t-crm').setAttribute('aria-pressed',name==='crm');
+    $('v-sched').hidden=name!=='sched';$('v-crm').hidden=name!=='crm';
+    try{history.replaceState(null,'',name==='crm'?'#clients':'#');}catch(e){}
+    name==='crm'?loadClients():loadWeek();
+  }
+  $('t-sched').onclick=()=>tab('sched');$('t-crm').onclick=()=>tab('crm');
+  $('logout').onclick=async()=>{try{await api('/admin/logout',{method:'POST'});}catch(e){}location.href='/admin/login';};
+
+  (async()=>{
+    const me=await api('/api/admin/me');STATUS=me.statuses;HOURS=me.hours;WORK=me.workdays;$('who').textContent=me.name;
+    week=monday(todayKey());renderChips();tab(location.hash==='#clients'?'crm':'sched');
+    setInterval(()=>{if($('panel').hidden)refresh();},30000); // записи из бота подтягиваются сами
+  })();
+})();
+</script>
+</body></html>

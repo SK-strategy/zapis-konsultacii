@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Вход в админку</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@600&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<style>.box{max-width:380px;margin:12vh auto 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;display:grid;gap:14px}h1{font-size:22px}</style>
+</head><body>
+<form class="box" id="f" novalidate>
+  <h1>Вход в админку</h1>
+  <p class="sub" style="margin:0">Расписание консультаций и клиенты. Логин и пароль выдаёт руководитель.</p>
+  <div class="field"><label for="l">Логин</label><input id="l" autocomplete="username" autocapitalize="none" required></div>
+  <div class="field"><label for="p">Пароль</label><input id="p" type="password" autocomplete="current-password" required></div>
+  <p class="err" id="e" hidden></p>
+  <button class="btn" id="go" type="submit">Войти</button>
+</form>
+<script>
+document.getElementById('f').addEventListener('submit',async ev=>{
+  ev.preventDefault();const e=document.getElementById('e'),go=document.getElementById('go');e.hidden=true;go.disabled=true;
+  try{const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:document.getElementById('l').value,password:document.getElementById('p').value})});
+    const j=await r.json().catch(()=>({}));if(r.ok){location.href='/admin';return;}e.textContent=j.error||'Не получилось войти.';e.hidden=false;}
+  catch(x){e.textContent='Нет связи с сервером.';e.hidden=false;}finally{go.disabled=false;}
+});
+</script></body></html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Запись на консультацию</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+<style>
+.lead{max-width:560px;margin:0 auto;padding-block:28px 0;display:grid;gap:24px}
+.step{display:grid;gap:10px}
+.step h2{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
+.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.day{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 12px;text-align:left;min-width:84px}
+.day b{display:block;font-weight:600}.day small{color:var(--muted);font-size:12px}
+.day[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.day:disabled{opacity:.45;cursor:default}
+.times{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.time{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:10px 12px;text-align:left;display:grid;gap:2px}
+.time b{font-size:17px;font-weight:600}.time small{color:var(--muted);font-size:12px}
+.time[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.time:disabled{background:var(--sunk);color:var(--muted);cursor:default;text-decoration:line-through}
+.form{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}.check input{margin-top:3px}
+.done{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:grid;gap:10px}
+.done h2{font:600 22px/1.25 var(--f-display);margin:0}
+.loading{color:var(--muted)}
+</style>
+</head>
+<body>
+<main class="lead">
+  <header>
+    <h1>Запись на консультацию</h1>
+    <p class="sub">Консультация длится час. Выберите удобный день и время — время показано по Москве и по вашему часовому поясу.</p>
+  </header>
+  <p class="loading" id="loading">Загружаю свободное время…</p>
+  <p class="err" id="loaderr" hidden>Не получилось загрузить расписание. Обновите страницу.</p>
+  <section class="step" id="s-day" hidden><h2>1. День</h2><div class="days" id="days"></div></section>
+  <section class="step" id="s-time" hidden><h2>2. Время</h2><div class="times" id="times"></div></section>
+  <section class="step" id="s-form" hidden>
+    <h2>3. Контакты</h2>
+    <form class="form" id="f" novalidate>
+      <p id="picked"></p>
+      <div class="field"><label for="f-name">Как к вам обращаться</label><input id="f-name" autocomplete="name" required></div>
+      <div class="field"><label for="f-phone">Телефон</label><input id="f-phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00" required></div>
+      <div class="field"><label for="f-tg">Telegram (необязательно)</label><input id="f-tg" placeholder="@username"></div>
+      <div class="field"><label for="f-note">С каким запросом придёте (необязательно)</label><textarea id="f-note" rows="2"></textarea></div>
+      <div class="hp" aria-hidden="true"><label for="f-web">Не заполняйте</label><input id="f-web" tabindex="-1" autocomplete="off"></div>
+      <label class="check"><input type="checkbox" id="f-consent"><span>Согласна(ен) на <a href="/privacy" target="_blank">обработку персональных данных</a> для записи на консультацию</span></label>
+      <p class="err" id="f-err" hidden></p>
+      <button class="btn" id="f-go" type="submit">Записаться</button>
+    </form>
+  </section>
+  <section class="done" id="done" hidden>
+    <h2>Вы записаны</h2>
+    <p class="tnum" id="done-when"></p>
+    <p class="note">Добавьте консультацию в календарь телефона — он напомнит за час до начала.</p>
+    <div class="row">
+      <a class="btn" id="ics" href="#">Добавить в календарь</a>
+      <a class="btn ghost" id="gcal" href="#" target="_blank" rel="noopener">Google Календарь</a>
+    </div>
+    <p class="note">Если планы изменятся, напишите менеджеру — время перенесут.</p>
+  </section>
+</main>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],MON=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+  const pad=n=>String(n).padStart(2,'0');
+  const sameTZ=Math.abs(new Date().getTimezoneOffset()+180)<1;
+  const loc=iso=>new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(iso));
+  const locDay=iso=>new Intl.DateTimeFormat('ru-RU',{weekday:'short',day:'numeric',month:'short'}).format(new Date(iso));
+  const dayLabel=ds=>{const[y,m,d]=ds.split('-').map(Number);const w=new Date(Date.UTC(y,m-1,d)).getUTCDay();return`${WD[w]}, ${d} ${MON[m-1]}`;};
+  const el=(t,a={},k=[])=>{const n=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='text')n.textContent=v;else if(x.startsWith('on'))n.addEventListener(x.slice(2),v);else if(v===true)n.setAttribute(x,'');else if(v!==false&&v!=null)n.setAttribute(x,v);}for(const c of[].concat(k))if(c!=null)n.append(c);return n;};
+
+  // подстановка из ссылки бота: /?name=Анна&phone=79001234567&tg=anna
+  const q=new URLSearchParams(location.search);
+  if(q.get('name'))$('f-name').value=q.get('name');
+  if(q.get('phone'))$('f-phone').value=q.get('phone');
+  if(q.get('tg'))$('f-tg').value=q.get('tg');
+
+  let days=[],day=null,pick=null;
+  async function load(){
+    try{const r=await fetch('/api/slots');if(!r.ok)throw 0;days=(await r.json()).days;}
+    catch(e){$('loading').hidden=true;$('loaderr').hidden=false;return;}
+    $('loading').hidden=true;$('s-day').hidden=false;$('s-time').hidden=false;render();
+  }
+  const freeCount=d=>d.slots.filter(s=>s.free).length;
+  function render(){
+    if(!day||!days.find(d=>d.date===day)||!freeCount(days.find(d=>d.date===day)))day=(days.find(d=>freeCount(d))||days[0]||{}).date;
+    $('days').replaceChildren(...days.map(d=>{const n=freeCount(d);return el('button',{type:'button',class:'day','aria-pressed':String(d.date===day),disabled:!n,onclick:()=>{day=d.date;pick=null;render();}},[el('b',{text:dayLabel(d.date)}),el('small',{class:'tnum',text:n?`свободно: ${n}`:'всё занято'})]);}));
+    const cur=days.find(d=>d.date===day);
+    $('times').replaceChildren(...(cur?cur.slots:[]).map(s=>el('button',{type:'button',class:'time',disabled:!s.free,'aria-pressed':String(!!pick&&pick.date===day&&pick.hour===s.hour),onclick:()=>{pick={date:day,hour:s.hour,start:s.start};render();setTimeout(()=>$('f-name').focus(),0);}},[
+      el('b',{class:'tnum',text:`${pad(s.hour)}:00 МСК`}),el('small',{class:'tnum',text:s.free?(sameTZ?'по Москве':`у вас ${loc(s.start)}`):'занято'})])));
+    $('s-form').hidden=!pick;
+    if(pick)$('picked').replaceChildren('Вы выбрали: ',el('b',{class:'tnum',text:`${dayLabel(pick.date)}, ${pad(pick.hour)}:00 по Москве`}),sameTZ?null:el('span',{class:'tnum',text:` (у вас ${locDay(pick.start)}, ${loc(pick.start)})`}));
+  }
+  $('f').addEventListener('submit',async e=>{
+    e.preventDefault();const err=$('f-err');err.hidden=true;
+    const b={date:pick.date,hour:pick.hour,name:$('f-name').value.trim(),phone:$('f-phone').value.trim(),telegram:$('f-tg').value.trim(),note:$('f-note').value.trim(),consent:$('f-consent').checked,website:$('f-web').value};
+    if(!b.name||!b.phone){err.textContent='Укажите имя и телефон.';err.hidden=false;return;}
+    if(!b.consent){err.textContent='Отметьте согласие на обработку данных — без него записать не получится.';err.hidden=false;return;}
+    $('f-go').disabled=true;
+    try{
+      const r=await fetch('/api/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok){err.textContent=j.error||'Не получилось записаться. Попробуйте ещё раз.';err.hidden=false;if(r.status===409){pick=null;await load();}return;}
+      $('done-when').textContent=`${dayLabel(j.date)}, ${pad(j.hour)}:00 по Москве`+(sameTZ?'':` — у вас ${locDay(j.start)}, ${loc(j.start)}`);
+      $('ics').href=j.ics;$('gcal').href=j.gcal;
+      ['s-day','s-time','s-form'].forEach(x=>$(x).hidden=true);$('done').hidden=false;window.scrollTo(0,0);
+    }catch(ex){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';err.hidden=false;}
+    finally{$('f-go').disabled=false;}
+  });
+  load();
+})();
+</script>
+</body>
+</html>
