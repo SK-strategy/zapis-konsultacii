@@ -44,7 +44,6 @@
       <p id="picked"></p>
       <div class="field"><label for="f-name">Как к вам обращаться</label><input id="f-name" autocomplete="name" required></div>
       <div class="field"><label for="f-phone">Телефон</label><input id="f-phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00" required></div>
-      <div class="field"><label for="f-note">С каким запросом придёте (необязательно)</label><textarea id="f-note" rows="2"></textarea></div>
       <div class="hp" aria-hidden="true"><label for="f-web">Не заполняйте</label><input id="f-web" tabindex="-1" autocomplete="off"></div>
       <label class="check"><input type="checkbox" id="f-consent"><span>Согласна(ен) на <a href="/privacy" target="_blank">обработку персональных данных</a> для записи на консультацию</span></label>
       <p class="err" id="f-err" hidden></p>
@@ -97,7 +96,7 @@
   }
   $('f').addEventListener('submit',async e=>{
     e.preventDefault();const err=$('f-err');err.hidden=true;
-    const b={date:pick.date,hour:pick.hour,name:$('f-name').value.trim(),phone:$('f-phone').value.trim(),note:$('f-note').value.trim(),consent:$('f-consent').checked,website:$('f-web').value};
+    const b={date:pick.date,hour:pick.hour,name:$('f-name').value.trim(),phone:$('f-phone').value.trim(),consent:$('f-consent').checked,website:$('f-web').value};
     if(!b.name||!b.phone){err.textContent='Укажите имя и телефон.';err.hidden=false;return;}
     if(!b.consent){err.textContent='Отметьте согласие на обработку данных — без него записать не получится.';err.hidden=false;return;}
     $('f-go').disabled=true;
