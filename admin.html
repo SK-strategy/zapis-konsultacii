@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
 <link rel="stylesheet" href="static/app.css?v=21696125">
-<script src="static/demo-api.js?v=26a34a8f"></script>
+<script src="static/demo-api.js?v=9f163e85"></script>
 <style>
 .top{max-width:1180px;margin:0 auto;padding-block:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
 .brand{font:600 16px/1.2 var(--f-display)}
@@ -141,11 +141,11 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
   const fld=(id,label,input)=>el('div',{class:'field'},[el('label',{for:id,text:label}),input]);
   const copyBtn=text=>el('button',{class:'copy',type:'button',text:'копировать',onclick:async ev=>{try{await navigator.clipboard.writeText(text);ev.target.textContent='скопировано';}catch(e){}}});
 
-  const quizBox=q=>q?el('div',{class:'quiz'},[el('b',{text:'Ответы теста'}),el('span',{text:q.summary}),el('span',{class:'mt',text:'Показан ответ: '+q.scenario_title})]):null;
+  const quizBox=q=>q?el('div',{class:'quiz'},[el('b',{text:'Ответы опроса'}),el('span',{text:q.summary}),el('span',{class:'mt',text:'Показан ответ: '+q.scenario_title})]):null;
   async function loadFunnel(){
     try{const s=await api('/api/admin/stats?days=7');
       const pct=(a,b)=>b?` (${Math.round(a*100/b)}%)`:'';
-      $('funnel').replaceChildren('Воронка за 7 дней:',...[['открыли',s.open,null],['начали тест',s.start,s.open],['прошли тест',s.quiz_done,s.start],['записались',s.booked,s.quiz_done]].map(([k,v,base])=>el('span',{class:'stat tnum'},[el('b',{text:String(v)}),' '+k+(base!=null?pct(v,base):'')])));
+      $('funnel').replaceChildren('Воронка за 7 дней:',...[['открыли',s.open,null],['начали опрос',s.start,s.open],['прошли опрос',s.quiz_done,s.start],['записались',s.booked,s.quiz_done]].map(([k,v,base])=>el('span',{class:'stat tnum'},[el('b',{text:String(v)}),' '+k+(base!=null?pct(v,base):'')])));
     }catch(e){}
   }
   // ---------- расписание ----------
@@ -215,7 +215,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:4px 0}
   $('q').addEventListener('input',()=>{clearTimeout(qTimer);qTimer=setTimeout(loadClients,250);});
   async function loadClients(){
     const j=await api('/api/admin/clients?q='+encodeURIComponent($('q').value)+'&status='+fStatus);
-    const head=el('thead',{},el('tr',{},['Клиент','Телефон','Ответы теста','Статус','Консультаций','Последняя запись'].map(t=>el('th',{text:t}))));
+    const head=el('thead',{},el('tr',{},['Клиент','Телефон','Ответы опроса','Статус','Консультаций','Последняя запись'].map(t=>el('th',{text:t}))));
     if(!j.clients.length){$('crm').replaceChildren(head,el('tbody',{},el('tr',{},el('td',{colspan:6,class:'empty',text:$('q').value||fStatus?'Никого не нашлось. Измените поиск или фильтр.':'Клиентов пока нет. Они появятся после первой записи.'}))));return;}
     $('crm').replaceChildren(head,el('tbody',{},j.clients.map(c=>el('tr',{tabindex:0,onclick:()=>openClient(c.id),onkeydown:e=>{if(e.key==='Enter')openClient(c.id);}},[
       el('td',{},[el('div',{class:'nm',text:c.name}),c.notes?el('div',{class:'mt',text:c.notes.slice(0,60)+(c.notes.length>60?'…':'')}):null]),

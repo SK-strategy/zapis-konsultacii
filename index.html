@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
 <link rel="stylesheet" href="static/app.css?v=21696125">
-<script src="static/demo-api.js?v=26a34a8f"></script>
+<script src="static/demo-api.js?v=9f163e85"></script>
 <style>
 /* Один столбец как переписка: сообщения эксперта слева, ответы кнопками */
 .flow{max-width:560px;margin:0 auto;padding-block:20px 0;display:grid;gap:16px}
@@ -102,7 +102,7 @@
     show(progress(4),el('div',{class:'msg result',text:F.scenarios[scenario(answers)].text}),
       el('div',{class:'offer'},[el('h2',{text:F.offer.title}),el('p',{text:F.offer.text}),
         el('button',{class:'btn big',type:'button',text:F.offer.button,onclick:slots})]),
-      el('button',{class:'back',type:'button',text:'← Пройти тест заново',onclick:()=>{answers={};step=0;question();}}));
+      el('button',{class:'back',type:'button',text:'← Пройти опрос заново',onclick:()=>{answers={};step=0;question();}}));
   }
   async function slots(){
     try{const r=await fetch('/api/slots');if(!r.ok)throw 0;days=(await r.json()).days;}catch(e){show(el('p',{class:'err',text:'Не получилось загрузить свободное время. Обновите страницу.'}));return;}

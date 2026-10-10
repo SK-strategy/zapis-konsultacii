@@ -100,7 +100,7 @@
     show(progress(4),el('div',{class:'msg result',text:F.scenarios[scenario(answers)].text}),
       el('div',{class:'offer'},[el('h2',{text:F.offer.title}),el('p',{text:F.offer.text}),
         el('button',{class:'btn big',type:'button',text:F.offer.button,onclick:slots})]),
-      el('button',{class:'back',type:'button',text:'← Пройти тест заново',onclick:()=>{answers={};step=0;question();}}));
+      el('button',{class:'back',type:'button',text:'← Пройти опрос заново',onclick:()=>{answers={};step=0;question();}}));
   }
   async function slots(){
     try{const r=await fetch('/api/slots');if(!r.ok)throw 0;days=(await r.json()).days;}catch(e){show(el('p',{class:'err',text:'Не получилось загрузить свободное время. Обновите страницу.'}));return;}
