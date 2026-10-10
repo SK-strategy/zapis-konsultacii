@@ -55,9 +55,12 @@ def _secret():
     if env:
         return env
     p = os.path.join(DATA_DIR, ".secret_key")
-    if not os.path.exists(p):
-        with open(p, "w") as f:
+    try:  # атомарно: при нескольких воркерах ключ создаёт только один
+        fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "w") as f:
             f.write(secrets.token_hex(32))
+    except FileExistsError:
+        pass
     with open(p) as f:
         return f.read().strip()
 

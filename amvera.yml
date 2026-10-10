@@ -1,0 +1,15 @@
+meta:
+  environment: python
+  toolchain:
+    name: pip
+    version: "3.11"
+
+build:
+  requirementsPath: server/requirements.txt
+
+run:
+  # База и ключ сессий лежат на постоянном диске /data — переживают редеплой.
+  # Логины менеджеров задаются в панели Amvera: переменная ADMIN_USERS (секрет).
+  command: gunicorn --chdir server --env DATA_DIR=/data --bind 0.0.0.0:80 --workers 2 --preload --access-logfile - app:app
+  containerPort: 80
+  persistenceMount: /data
