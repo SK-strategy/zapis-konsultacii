@@ -152,11 +152,15 @@ def slot_problem(date, hour, for_client=True):
 
 # ---------- клиенты ----------
 def norm_phone(raw):
+    """Только российские номера: +7, 8 или 10 цифр. Код начинается с 3, 4, 8 (городские) или 9 (мобильные).
+    Возвращает +7XXXXXXXXXX или None."""
     d = re.sub(r"\D", "", raw or "")
-    if len(d) == 11 and d[0] == "8": d = "7" + d[1:]
-    if len(d) == 10: d = "7" + d
-    if not (10 <= len(d) <= 15): return None
-    return "+" + d
+    if len(d) == 11 and d[0] in "78": d = d[1:]
+    if len(d) != 10 or d[0] not in "3489": return None
+    if len(set(d)) <= 2: return None  # 9999999999, 9000000000 и подобное
+    return "+7" + d
+
+PHONE_ERROR = "Проверьте номер: нужен российский телефон, например +7 912 345-67-89."
 
 def norm_ig(raw):
     """Ник в Instagram: принимает @ник, ник или ссылку на профиль, хранит как @ник."""
@@ -291,7 +295,7 @@ def api_book():
     if b.get("website"):  # ловушка для ботов: поле скрыто от людей
         return jsonify(error="Запрос отклонён."), 400
     if not name: return jsonify(error="Укажите, как к вам обращаться."), 400
-    if not phone: return jsonify(error="Проверьте номер телефона: нужен номер с кодом страны или из 10–11 цифр."), 400
+    if not phone: return jsonify(error=PHONE_ERROR), 400
     if not b.get("consent"): return jsonify(error="Отметьте согласие на обработку данных — без него записать не получится."), 400
     if not isinstance(hour, int): return jsonify(error="Выберите время."), 400
     quiz = clean_quiz(b.get("quiz")) if b.get("quiz") else None
@@ -389,7 +393,7 @@ def admin_create():
     name = (b.get("name") or "").strip()[:80]
     phone = norm_phone(b.get("phone"))
     if not name: return jsonify(error="Укажите имя."), 400
-    if not phone: return jsonify(error="Укажите телефон: он нужен, чтобы найти клиента в CRM."), 400
+    if not phone: return jsonify(error=PHONE_ERROR if (b.get("phone") or "").strip() else "Укажите телефон: он нужен, чтобы найти клиента в CRM."), 400
     date, hour = b.get("date"), b.get("hour")
     problem = slot_problem(date, hour if isinstance(hour, int) else -1, for_client=False)
     if problem: return jsonify(error=problem), 409
@@ -490,7 +494,7 @@ def client_update(cid):
         fields.append("status=?"); args.append(b["status"])
     if "phone" in b:
         p = norm_phone(b["phone"])
-        if not p: return jsonify(error="Проверьте номер телефона."), 400
+        if not p: return jsonify(error=PHONE_ERROR), 400
         fields.append("phone=?"); args.append(p)
     if not fields: return jsonify(ok=True)
     fields.append("updated_at=?"); args.append(iso_now())

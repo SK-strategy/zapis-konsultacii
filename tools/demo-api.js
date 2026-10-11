@@ -22,7 +22,8 @@
   function scenario(a){if(a.debt!=='gt500')return's7';return{'yes|official':'s1','no|none':'s2','yes|business':'s3','yes|none':'s4','no|official':'s5','no|business':'s6'}[a.property+'|'+a.work];}
   function cleanQuiz(r){if(!r||typeof r!=='object')return null;const a={};for(const k in QUESTIONS){if(!QUESTIONS[k][r[k]])return null;a[k]=r[k];}
     const sc=scenario(a);return{answers:a,scenario:sc,scenario_title:FUNNEL.scenarios[sc].title,summary:Object.keys(QUESTIONS).map(k=>QUESTIONS[k][a[k]].short).join(' · ')};}
-  function normPhone(raw){let d=String(raw||'').replace(/\D/g,'');if(d.length===11&&d[0]==='8')d='7'+d.slice(1);if(d.length===10)d='7'+d;return d.length>=10&&d.length<=15?'+'+d:null;}
+  function normPhone(raw){let d=String(raw||'').replace(/\D/g,'');if(d.length===11&&'78'.includes(d[0]))d=d.slice(1);if(d.length!==10||!'3489'.includes(d[0])||new Set(d).size<=2)return null;return '+7'+d;}
+  const PHONE_ERROR='Проверьте номер: нужен российский телефон, например +7 912 345-67-89.';
   function problem(date,hour,forClient){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return'Неверная дата.';
     if(!HOURS.includes(hour)||!WORKDAYS.includes(wd(date)))return'В это время консультаций нет.';
@@ -53,7 +54,7 @@
       out.push({date:s,slots:HOURS.map(h=>({hour:h,start:startIso(s,h),free:!db.bookings.some(b=>b.slot===slotId(s,h)&&active(b))&&!db.blocked[slotId(s,h)]&&start(s,h)>Date.now()+LEAD_MIN*6e4}))});}
       return R(200,{days:out,slot_minutes:SLOT_MIN});}],
     ['POST',/^\/api\/book$/,(m,b)=>{const name=(b.name||'').trim(),phone=normPhone(b.phone);
-      if(!name)return R(400,{error:'Укажите, как к вам обращаться.'});if(!phone)return R(400,{error:'Проверьте номер телефона: нужен номер с кодом страны или из 10–11 цифр.'});
+      if(!name)return R(400,{error:'Укажите, как к вам обращаться.'});if(!phone)return R(400,{error:PHONE_ERROR});
       if(!b.consent)return R(400,{error:'Отметьте согласие на обработку данных — без него записать не получится.'});
       const p=problem(b.date,b.hour,true);if(p)return R(409,{error:p});
       const quiz=b.quiz?cleanQuiz(b.quiz):null;const tok=createBooking(b.date,b.hour,name,phone,'','bot',quiz);
@@ -64,7 +65,7 @@
       const bl={};for(const k in db.blocked)if(k>=s&&k<e)bl[k]=db.blocked[k].reason||'';
       return R(200,{bookings:db.bookings.filter(x=>active(x)&&x.date>=s&&x.date<e).map(row),blocked:bl,now:iso()});}],
     ['POST',/^\/api\/admin\/bookings$/,(m,b)=>{const name=(b.name||'').trim(),phone=normPhone(b.phone);
-      if(!name)return R(400,{error:'Укажите имя.'});if(!phone)return R(400,{error:'Укажите телефон: он нужен, чтобы найти клиента в CRM.'});
+      if(!name)return R(400,{error:'Укажите имя.'});if(!phone)return R(400,{error:String(b.phone||'').trim()?PHONE_ERROR:'Укажите телефон: он нужен, чтобы найти клиента в CRM.'});
       const p=problem(b.date,b.hour,false);if(p)return R(409,{error:p});const tok=createBooking(b.date,b.hour,name,phone,b.note,'manager',null);
       return tok?R(200,{ok:true}):R(409,{error:'Это время только что заняли.'});}],
     ['PATCH',/^\/api\/admin\/bookings\/(\d+)$/,(m,b)=>{const x=db.bookings.find(y=>y.id===+m[1]);if(!x)return R(404,{error:'Запись не найдена.'});

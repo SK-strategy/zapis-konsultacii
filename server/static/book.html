@@ -118,14 +118,31 @@
         el('b',{class:'tnum',text:`${pad(s.hour)}:00 МСК`}),el('small',{class:'tnum',text:s.free?(sameTZ?'по Москве':`у вас ${loc(s.start)}`):'занято'})]))),
       el('button',{class:'back',type:'button',text:'← Назад',onclick:result}));
   }
+  // Телефон: только Россия. Маска +7 (912) 345-67-89, первая 7/8 считается кодом страны.
+  function phoneNational(v){v=String(v||'').trim();let d=v.replace(/\D/g,'');
+    if(/^\+\s*7/.test(v))d=d.slice(1);            // «+7 …» — код страны
+    else if(d.length===11&&'78'.includes(d[0]))d=d.slice(1); // «8 912 …», «7912…»
+    if(d.length>10&&'78'.includes(d[0]))d=d.slice(1);       // набрали 8 после уже подставленного +7
+    return d.slice(0,10);}
+  const phoneForeign=v=>/^\s*\+\s*[0-689]/.test(String(v||''));  // +380, +375… — не российский, не маскируем
+  function phoneMask(v,del){if(phoneForeign(v))return String(v).replace(/[^\d+\s()-]/g,'');const d=phoneNational(v);if(!d)return !del&&/\d|\+/.test(v)?'+7 (':'';let s='+7 ('+d.slice(0,3);
+    if(d.length>3)s+=') '+d.slice(3,6);if(d.length>6)s+='-'+d.slice(6,8);if(d.length>8)s+='-'+d.slice(8,10);return s;}
+  function phoneValid(v){if(phoneForeign(v))return false;const d=phoneNational(v);return d.length===10&&'3489'.includes(d[0])&&new Set(d).size>2;}
   function contacts(){
-    const name=el('input',{id:'f-name',autocomplete:'name',value:prefill.name}),phone=el('input',{id:'f-phone',type:'tel',autocomplete:'tel',placeholder:'+7 900 000-00-00',value:prefill.phone});
+    const name=el('input',{id:'f-name',autocomplete:'name',value:prefill.name}),phone=el('input',{id:'f-phone',type:'tel',inputmode:'tel',autocomplete:'tel',placeholder:'+7 (912) 345-67-89',value:phoneMask(prefill.phone)});
+    const phoneErr=el('small',{class:'ferr',id:'f-phone-err',hidden:true,text:'Нужен российский номер: +7 и 10 цифр, например +7 (912) 345-67-89.'});
+    // msg=false — только красная рамка (без сдвига вёрстки, чтобы не промахнуться по галочке на телефоне)
+    const markPhone=(on,msg=true)=>{phone.setAttribute('aria-invalid',on?'true':'false');if(!on)phoneErr.hidden=true;else if(msg)phoneErr.hidden=false;};
+    phone.setAttribute('aria-describedby','f-phone-err');
+    phone.addEventListener('input',e=>{phone.value=phoneMask(phone.value,/^delete/.test(e.inputType||''));if(phone.getAttribute('aria-invalid')==='true'&&phoneValid(phone.value))markPhone(false);});
+    phone.addEventListener('focus',()=>{if(!phone.value)phone.value='+7 (';});
+    phone.addEventListener('blur',()=>{if(!phoneNational(phone.value))phone.value='';markPhone(!!phone.value&&!phoneValid(phone.value),false);});
     const web=el('input',{id:'f-web',tabindex:'-1',autocomplete:'off'}),consent=el('input',{type:'checkbox',id:'f-consent'}),err=el('p',{class:'err',hidden:true});
     const go=el('button',{class:'btn big',type:'submit',text:'Записаться'});
     const form=el('form',{class:'form',novalidate:true},[
       el('p',{style:'margin:0'},['Вы выбрали: ',el('b',{class:'tnum',text:`${dayLabel(pick.date)}, ${pad(pick.hour)}:00 по Москве`}),sameTZ?null:el('span',{class:'tnum',text:` (у вас ${locDay(pick.start)}, ${loc(pick.start)})`})]),
       el('div',{class:'field'},[el('label',{for:'f-name',text:'Как к вам обращаться'}),name]),
-      el('div',{class:'field'},[el('label',{for:'f-phone',text:'Телефон для звонка'}),phone]),
+      el('div',{class:'field'},[el('label',{for:'f-phone',text:'Телефон для звонка'}),phone,phoneErr]),
       el('div',{class:'hp','aria-hidden':'true'},[el('label',{for:'f-web',text:'Не заполняйте'}),web]),
       el('label',{class:'check'},[consent,el('span',{},['Согласна(ен) на обработку персональных данных. ',el('a',{href:F.privacy_url,target:'_blank',rel:'noopener',text:'Документ'})])]),
       err,go]);
@@ -133,6 +150,7 @@
       e.preventDefault();err.hidden=true;
       const b={date:pick.date,hour:pick.hour,name:name.value.trim(),phone:phone.value.trim(),consent:consent.checked,website:web.value,quiz:answers};
       if(!b.name||!b.phone){err.textContent='Укажите имя и телефон.';err.hidden=false;return;}
+      if(!phoneValid(b.phone)){markPhone(true);phone.focus();return;}
       if(!b.consent){err.textContent='Отметьте согласие на обработку данных — без него записать не получится.';err.hidden=false;return;}
       go.disabled=true;
       try{
