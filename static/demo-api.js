@@ -34,7 +34,7 @@
     if(c){c.name=name;c.updated_at=t;return c;}c={id:db.seq++,phone,name,instagram:'',status:'booked',notes:'',quiz:null,created_at:t,updated_at:t};db.clients.push(c);return c;}
   function createBooking(date,hour,name,phone,note,source,quiz){
     const id=slotId(date,hour);if(db.bookings.some(b=>b.slot===id&&active(b)))return null;
-    const c=upsertClient(name,phone);const token=Math.random().toString(36).slice(2);
+    const c=upsertClient(name,phone);const token=`${date}_${hour}_${Math.random().toString(36).slice(2,10)}`;
     db.bookings.push({id:db.seq++,slot:id,date,hour,client_id:c.id,note:note||'',source,status:'booked',token,created_at:iso(),created_by:source==='manager'?'Демо-менеджер':null,quiz:quiz||null});
     c.status='booked';c.updated_at=iso();if(quiz)c.quiz=quiz;save();return token;}
   function eventPayload(date,hour,token){
@@ -42,13 +42,16 @@
     const title=FUNNEL.event_title||'Консультация';
     const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//zapis-demo//RU','BEGIN:VEVENT',`UID:${token}@zapis-demo`,`DTSTAMP:${f(new Date())}`,`DTSTART:${f(s)}`,`DTEND:${f(e)}`,`SUMMARY:${title}`,'BEGIN:VALARM','TRIGGER:-PT1H','ACTION:DISPLAY',`DESCRIPTION:${title} через час`,'END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
     return{date,hour,start:startIso(date,hour),ics:'data:text/calendar;charset=utf-8,'+encodeURIComponent(ics),
-      gcal:`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${f(s)}/${f(e)}`};}
+      gcal:`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${f(s)}/${f(e)}`,token};}
   const clientOf=id=>db.clients.find(c=>c.id===id);
   const row=b=>{const c=clientOf(b.client_id);return{...b,client:{id:c.id,name:c.name,phone:c.phone,instagram:c.instagram}};};
   const R=(status,obj)=>Promise.resolve(new Response(JSON.stringify(obj),{status,headers:{'Content-Type':'application/json'}}));
 
   const routes=[
     ['GET',/^\/api\/funnel$/,()=>R(200,FUNNEL)],
+    ['GET',/^\/api\/booking\/([^/]+)$/,(m)=>{const t=decodeURIComponent(m[1]),k=/^(\d{4}-\d\d-\d\d)_(\d{1,2})_/.exec(t);
+      const own=db.bookings.find(x=>x.token===t);if(own&&!active(own))return R(404,{error:'Запись не найдена или отменена.'});
+      return k?R(200,{ok:true,...eventPayload(k[1],+k[2],t)}):R(404,{error:'Запись не найдена или отменена.'});}],
     ['POST',/^\/api\/track$/,(m,b)=>{if(['open','start','quiz_done'].includes(b.event)&&b.sid){const k=b.sid+'|'+b.event;if(!db.events[k]){db.events[k]=todayMsk();save();}}return R(200,{ok:true});}],
     ['GET',/^\/api\/slots$/,()=>{const out=[],t=todayMsk();for(let i=0;i<DAYS_AHEAD;i++){const s=addDays(t,i);if(!WORKDAYS.includes(wd(s)))continue;
       out.push({date:s,slots:HOURS.map(h=>({hour:h,start:startIso(s,h),free:!db.bookings.some(b=>b.slot===slotId(s,h)&&active(b))&&!db.blocked[slotId(s,h)]&&start(s,h)>Date.now()+LEAD_MIN*6e4}))});}

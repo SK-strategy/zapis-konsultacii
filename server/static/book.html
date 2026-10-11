@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Проверка: подходит ли списание долгов</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -164,19 +165,47 @@
     show(progress(5),form,el('button',{class:'back',type:'button',text:'← Выбрать другое время',onclick:renderSlots}));
     setTimeout(()=>(name.value?phone:name).focus(),0);
   }
+  // Ссылка на запись: ?b=<token>. Её открывает «⋯ → Открыть в браузере» в Instagram и её можно скопировать.
+  function bookingUrl(token){const u=new URL(location.href);u.search='?b='+encodeURIComponent(token);u.hash='';return u.href;}
+  async function copyText(text,input){
+    try{await navigator.clipboard.writeText(text);return true;}catch(e){}
+    try{input.focus();input.select();input.setSelectionRange(0,text.length);if(document.execCommand('copy'))return true;}catch(e){}
+    return false;
+  }
   function done(j){
-    const ig=/Instagram/i.test(navigator.userAgent);
+    const ig=/Instagram|FBAN|FBAV|FB_IAB/i.test(navigator.userAgent);
+    let link=null;
+    if(j.token){link=bookingUrl(j.token);try{history.replaceState(null,'',link);}catch(e){}}
+    let copyBox=null;
+    if(link){
+      const inp=el('input',{class:'linkbox',readonly:true,value:link,'aria-label':'Ссылка на вашу запись',onclick:e=>e.target.select()});
+      const btn=el('button',{class:'btn ghost',type:'button',text:'Скопировать ссылку'});
+      btn.onclick=async()=>{const ok=await copyText(link,inp);btn.textContent=ok?'Скопировано ✓':'Выделите ссылку и скопируйте';setTimeout(()=>btn.textContent='Скопировать ссылку',2500);};
+      copyBox=el('div',{class:'copybox'},[
+        el('p',{class:'note',style:'margin:0',text:'Календарь не открывается? Скопируйте ссылку и вставьте её в Safari или Chrome — там откроется ваша запись с кнопками календаря.'}),
+        inp,btn]);
+    }
     show(el('div',{class:'done'},[el('h2',{text:'Вы записаны'}),
       el('p',{class:'tnum',style:'margin:0;font-weight:600',text:`${dayLabel(j.date)}, ${pad(j.hour)}:00 по Москве`+(sameTZ?'':` — у вас ${locDay(j.start)}, ${loc(j.start)}`)}),
       el('div',{class:'msg',text:F.done}),
       el('p',{class:'note',text:'Добавьте звонок в календарь телефона — он напомнит за час.'}),
       el('div',{class:'row'},[el('a',{class:'btn',href:j.ics,text:'Добавить в календарь'}),el('a',{class:'btn ghost',href:j.gcal,target:'_blank',rel:'noopener',text:'Google Календарь'})]),
-      ig?el('p',{class:'note',html:'Если календарь не открылся, нажмите <b>⋯</b> в правом верхнем углу и выберите «Открыть в браузере» — затем снова «Добавить в календарь».'}):null]));
+      ig?el('p',{class:'note',html:'В Instagram календарь может не открыться. Нажмите <b>⋯</b> в правом верхнем углу → «Открыть в браузере» — запись откроется там же, на этом экране.'}):null,
+      copyBox]));
   }
 
   (async()=>{
     try{const r=await fetch('/api/funnel');if(!r.ok)throw 0;F=await r.json();}catch(e){$('loading').hidden=true;$('loaderr').hidden=false;return;}
     $('loading').hidden=true;$('expert').textContent=F.expert;$('ava').textContent=F.expert.split(' ').map(w=>w[0]).join('').slice(0,2);
+    const bt=q.get('b');
+    if(bt){  // открыли ссылку на уже сделанную запись
+      try{const r=await fetch('/api/booking/'+encodeURIComponent(bt));const j=await r.json().catch(()=>({}));
+        if(r.ok){done(j);return;}
+        show(el('div',{class:'msg',text:(j.error||'Запись не найдена.')+' Можно записаться заново.'}));
+        try{history.replaceState(null,'',location.pathname);}catch(e){}
+        setTimeout(()=>{track('open');greeting();},1800);return;
+      }catch(e){}
+    }
     track('open');greeting();
   })();
 })();

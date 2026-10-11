@@ -312,7 +312,16 @@ def event_payload(date, hour, token):
     gcal = ("https://calendar.google.com/calendar/render?action=TEMPLATE"
             f"&text={quote(EVENT_TITLE)}&dates={f(start)}/{f(end)}"
             f"&details={quote('Время по Москве: ' + start.strftime('%d.%m %H:%M'))}")
-    return {"date": date, "hour": hour, "start": start.isoformat(), "ics": f"/ics/{token}.ics", "gcal": gcal}
+    return {"date": date, "hour": hour, "start": start.isoformat(), "ics": f"/ics/{token}.ics", "gcal": gcal, "token": token}
+
+@app.get("/api/booking/<token>")
+def api_booking(token):
+    """Экран «Вы записаны» по ссылке ?b=<token> — например, после «Открыть в браузере» из Instagram.
+    Отдаёт только время записи и ссылки на календарь, без имени и телефона."""
+    r = db().execute("SELECT date, hour, status FROM bookings WHERE token=?", (token,)).fetchone()
+    if not r or r["status"] == "cancelled":
+        return jsonify(error="Запись не найдена или отменена."), 404
+    return jsonify(ok=True, **event_payload(r["date"], r["hour"], token))
 
 @app.get("/ics/<token>.ics")
 def ics(token):
