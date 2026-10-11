@@ -22,8 +22,8 @@
   function scenario(a){if(a.debt!=='gt500')return's7';return{'yes|official':'s1','no|none':'s2','yes|business':'s3','yes|none':'s4','no|official':'s5','no|business':'s6'}[a.property+'|'+a.work];}
   function cleanQuiz(r){if(!r||typeof r!=='object')return null;const a={};for(const k in QUESTIONS){if(!QUESTIONS[k][r[k]])return null;a[k]=r[k];}
     const sc=scenario(a);return{answers:a,scenario:sc,scenario_title:FUNNEL.scenarios[sc].title,summary:Object.keys(QUESTIONS).map(k=>QUESTIONS[k][a[k]].short).join(' · ')};}
-  function normPhone(raw){let d=String(raw||'').replace(/\D/g,'');if(d.length===11&&'78'.includes(d[0]))d=d.slice(1);if(d.length!==10||!'3489'.includes(d[0])||new Set(d).size<=2)return null;return '+7'+d;}
-  const PHONE_ERROR='Проверьте номер: нужен российский телефон, например +7 912 345-67-89.';
+  function normPhone(raw){let d=String(raw||'').replace(/\D/g,'');if(d.length===11&&'78'.includes(d[0]))d=d.slice(1);if(d.length!==10||d[0]!=='9'||new Set(d).size<=2)return null;return '+7'+d;}
+  const PHONE_ERROR='Проверьте номер: нужен российский мобильный, например +7 912 345-67-89.';
   function problem(date,hour,forClient){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date||''))return'Неверная дата.';
     if(!HOURS.includes(hour)||!WORKDAYS.includes(wd(date)))return'В это время консультаций нет.';

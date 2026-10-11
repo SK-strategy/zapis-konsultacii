@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
 <link rel="stylesheet" href="static/app.css?v=1e77ab91">
-<script src="static/demo-api.js?v=4c0cf4a0"></script>
+<script src="static/demo-api.js?v=5b5696f0"></script>
 <style>
 /* Один столбец как переписка: сообщения эксперта слева, ответы кнопками */
 .flow{max-width:560px;margin:0 auto;padding-block:20px 0;display:grid;gap:16px}
@@ -121,19 +121,18 @@
         el('b',{class:'tnum',text:`${pad(s.hour)}:00 МСК`}),el('small',{class:'tnum',text:s.free?(sameTZ?'по Москве':`у вас ${loc(s.start)}`):'занято'})]))),
       el('button',{class:'back',type:'button',text:'← Назад',onclick:result}));
   }
-  // Телефон: только Россия. Маска +7 (912) 345-67-89, первая 7/8 считается кодом страны.
+  // Телефон: только российские мобильные. Маска +7 (912) 345-67-89; 7 или 8 в начале — код страны.
   function phoneNational(v){v=String(v||'').trim();let d=v.replace(/\D/g,'');
-    if(/^\+\s*7/.test(v))d=d.slice(1);            // «+7 …» — код страны
-    else if(d.length===11&&'78'.includes(d[0]))d=d.slice(1); // «8 912 …», «7912…»
-    if(d.length>10&&'78'.includes(d[0]))d=d.slice(1);       // набрали 8 после уже подставленного +7
+    if(/^\+\s*7/.test(v))d=d.slice(1);        // «+7 …» — код страны
+    if(d&&'78'.includes(d[0]))d=d.slice(1);   // «8 912 …», «7912…» или 8 после подставленного +7
     return d.slice(0,10);}
   const phoneForeign=v=>/^\s*\+\s*[0-689]/.test(String(v||''));  // +380, +375… — не российский, не маскируем
   function phoneMask(v,del){if(phoneForeign(v))return String(v).replace(/[^\d+\s()-]/g,'');const d=phoneNational(v);if(!d)return !del&&/\d|\+/.test(v)?'+7 (':'';let s='+7 ('+d.slice(0,3);
     if(d.length>3)s+=') '+d.slice(3,6);if(d.length>6)s+='-'+d.slice(6,8);if(d.length>8)s+='-'+d.slice(8,10);return s;}
-  function phoneValid(v){if(phoneForeign(v))return false;const d=phoneNational(v);return d.length===10&&'3489'.includes(d[0])&&new Set(d).size>2;}
+  function phoneValid(v){if(phoneForeign(v))return false;const d=phoneNational(v);return d.length===10&&d[0]==='9'&&new Set(d).size>2;}
   function contacts(){
     const name=el('input',{id:'f-name',autocomplete:'name',value:prefill.name}),phone=el('input',{id:'f-phone',type:'tel',inputmode:'tel',autocomplete:'tel',placeholder:'+7 (912) 345-67-89',value:phoneMask(prefill.phone)});
-    const phoneErr=el('small',{class:'ferr',id:'f-phone-err',hidden:true,text:'Нужен российский номер: +7 и 10 цифр, например +7 (912) 345-67-89.'});
+    const phoneErr=el('small',{class:'ferr',id:'f-phone-err',hidden:true,text:'Нужен российский мобильный: +7 (9XX) и ещё 7 цифр, например +7 (912) 345-67-89.'});
     // msg=false — только красная рамка (без сдвига вёрстки, чтобы не промахнуться по галочке на телефоне)
     const markPhone=(on,msg=true)=>{phone.setAttribute('aria-invalid',on?'true':'false');if(!on)phoneErr.hidden=true;else if(msg)phoneErr.hidden=false;};
     phone.setAttribute('aria-describedby','f-phone-err');
