@@ -357,7 +357,7 @@ def api_funnel():
 def api_track():
     b = body()
     sid, ev = str(b.get("sid") or "")[:40], b.get("event")
-    if not re.fullmatch(r"[A-Za-z0-9_-]{8,40}", sid) or ev not in FUNNEL_EVENTS or rate_limited("track:" + client_ip(), 300, 3600):
+    if not re.fullmatch(r"[A-Za-z0-9_-]{8,40}", sid) or ev not in FUNNEL_EVENTS or rate_limited("track:" + client_ip(), 3000, 3600):
         return jsonify(ok=False), 400
     src = resolve_source(clean_utm(b.get("utm")).get("utm_source"))
     db().execute("INSERT OR IGNORE INTO events(sid,event,day,created_at,src) VALUES(?,?,?,?,?)", (sid, ev, today_msk().isoformat(), iso_now(), src))
@@ -406,7 +406,7 @@ def client_fields(b):
 @app.post("/api/book")
 def api_book():
     if not same_origin(): return jsonify(error="Запрос отклонён."), 403
-    if rate_limited("book:" + client_ip(), 10, 3600):
+    if rate_limited("book:" + client_ip(), 40, 3600):
         return jsonify(error="Слишком много попыток. Попробуйте через час или выберите «Подобрать время с менеджером»."), 429
     b = body()
     f, err = client_fields(b)
@@ -440,7 +440,7 @@ def api_book():
 def api_request():
     """Ветка «Подобрать время с менеджером»: заявка без времени, статус «ожидает согласования»."""
     if not same_origin(): return jsonify(error="Запрос отклонён."), 403
-    if rate_limited("book:" + client_ip(), 10, 3600):
+    if rate_limited("book:" + client_ip(), 40, 3600):
         return jsonify(error="Слишком много попыток. Попробуйте через час."), 429
     f, err = client_fields(body())
     if err: return jsonify(error=err), 400
@@ -500,7 +500,7 @@ def api_booking_cancel(token):
 def api_booking_move(token):
     """Перенос самим клиентом: на свободное время, по возможности к тому же менеджеру."""
     if not same_origin(): return jsonify(error="Запрос отклонён."), 403
-    if rate_limited("move:" + client_ip(), 20, 3600): return jsonify(error="Слишком много попыток."), 429
+    if rate_limited("move:" + client_ip(), 60, 3600): return jsonify(error="Слишком много попыток."), 429
     b = body()
     date, hour = b.get("date"), b.get("hour")
     problem = slot_problem(date, hour)
