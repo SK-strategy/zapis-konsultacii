@@ -42,6 +42,8 @@ h1{font:600 clamp(22px,5vw,28px)/1.2 var(--f-display);margin:0;text-wrap:balance
 .st-bought{background:var(--ok);color:var(--surface)}
 .st-noshow{background:var(--bad-soft);color:var(--bad)}
 .st-cancelled{background:var(--sunk);color:var(--muted)}
+.st-request{background:var(--warn-soft);color:var(--warn)}
+.st-nc{background:var(--warn-soft);color:var(--warn)}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 
 .ferr{color:var(--bad);font-size:13px;margin-top:4px;display:block}

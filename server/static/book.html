@@ -4,56 +4,65 @@
 <meta charset="utf-8">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Проверка: подходит ли списание долгов</title>
+<title>Губенко Групп — личный план по долгам</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
 <link rel="stylesheet" href="/static/app.css">
 <style>
-/* Один столбец как переписка: сообщения эксперта слева, ответы кнопками */
-.flow{max-width:560px;margin:0 auto;padding-block:20px 0;display:grid;gap:16px}
-.who{display:flex;gap:10px;align-items:center}
-.ava{width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font:600 14px/1 var(--f-display);flex:0 0 auto}
-.who b{display:block;font-weight:600}.who small{color:var(--muted);font-size:13px}
+.flow{max-width:560px;margin:0 auto;padding-block:16px 0;display:grid;gap:16px}
+.brandbar{display:flex;gap:12px;align-items:center}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font:600 15px/1 var(--f-display);flex:0 0 auto;overflow:hidden}
+.logo img{width:100%;height:100%;object-fit:cover}
+.brandbar b{display:block;font:600 16px/1.2 var(--f-display)}.brandbar small{color:var(--muted);font-size:13px}
 .progress{display:flex;gap:6px}
 .progress i{flex:1;height:4px;border-radius:2px;background:var(--line)}
 .progress i.on{background:var(--accent)}
-.msg{background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:14px 16px;white-space:pre-line;max-width:100%}
-.msg h1{font-size:clamp(20px,5.5vw,24px);margin:0 0 8px;white-space:normal}
-.msg .q{font-weight:600;font-size:17px;margin:0}
-.msg .hint{color:var(--muted);font-size:14px;margin:6px 0 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:10px}
+.card h1{font-size:clamp(20px,5.4vw,24px);margin:0}
+.card h2{font:600 18px/1.3 var(--f-display);margin:0}
+.card p{margin:0;white-space:pre-line}
 .step-n{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.q{font-weight:600;font-size:18px;margin:0}
+.hint{color:var(--muted);font-size:14px;margin:0}
 .opts{display:grid;gap:8px}
-.opt{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;text-align:left;font-weight:500;font-size:16px}
+.opt{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;text-align:left;font-weight:500;font-size:16px;display:flex;gap:12px;align-items:center}
 .opt:hover{border-color:var(--accent)}
-.opt:active{background:var(--accent-soft)}
-.back{border:0;background:none;color:var(--muted);padding:0;font-size:14px;justify-self:start}
-.result{border-left:4px solid var(--accent)}
-.offer{display:grid;gap:12px;background:var(--accent-soft);border-radius:16px;padding:16px}
-.offer h2{font:600 18px/1.3 var(--f-display);margin:0}
-.offer p{margin:0;white-space:pre-line}
+.opt[aria-pressed="true"],.opt[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.box{width:20px;height:20px;border:2px solid var(--line);border-radius:6px;flex:0 0 auto;display:grid;place-items:center;font-size:13px;color:var(--accent-fg)}
+.opt[aria-checked="true"] .box{background:var(--accent);border-color:var(--accent)}
+.back{border:0;background:none;color:var(--muted);padding:4px 0;font-size:14px;justify-self:start}
 .big{width:100%;padding:15px 20px;font-size:16px}
+.offer{background:var(--accent-soft);border-color:transparent}
+.how{font-size:14px;color:var(--muted)}
+.tzrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px;color:var(--muted)}
+.tzrow select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font-size:14px;max-width:100%}
 .days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
 .day{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:8px 12px;text-align:left;min-width:84px}
 .day b{display:block;font-weight:600}.day small{color:var(--muted);font-size:12px}
 .day[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .day:disabled{opacity:.45;cursor:default}
-.times{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.times{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
 .time{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:10px 12px;text-align:left;display:grid;gap:2px}
 .time b{font-size:17px;font-weight:600}.time small{color:var(--muted);font-size:12px}
-.time[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .time:disabled{background:var(--sunk);color:var(--muted);cursor:default;text-decoration:line-through}
 .label{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600}
-.form{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.form{display:grid;gap:12px}
+.chipset{display:flex;flex-wrap:wrap;gap:8px}
+.chipset button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;font-weight:500}
+.chipset button[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
 .check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted)}.check input{margin-top:3px;width:18px;height:18px;flex:0 0 auto}
-.done{display:grid;gap:10px}
-.done h2{font:600 22px/1.25 var(--f-display);margin:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere;font-weight:500}
+.status{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:var(--warn-soft);color:var(--warn);width:max-content}
+.status.ok{background:var(--ok-soft);color:var(--ok)}.status.off{background:var(--sunk);color:var(--muted)}
+.confirm{background:var(--bad-soft);border-radius:12px;padding:12px;display:grid;gap:8px;font-size:14px}
 .loading{color:var(--muted)}
 @media (prefers-reduced-motion:no-preference){.screen{animation:rise .2s ease-out}@keyframes rise{from{transform:translateY(6px);opacity:.4}}}
 </style>
 </head>
 <body>
 <main class="flow">
-  <div class="who"><span class="ava" id="ava">АГ</span><div><b id="expert">Анастасия Губенко</b><small>юрист по банкротству</small></div></div>
+  <div class="brandbar"><span class="logo" id="logo">ГГ</span><div><b id="brand">Губенко Групп</b><small id="brandsub">юридическая помощь с долгами</small></div></div>
   <p class="loading" id="loading">Загружаю…</p>
   <p class="err" id="loaderr" hidden>Не получилось загрузить страницу. Проверьте интернет и обновите её.</p>
   <div id="screen"></div>
@@ -62,150 +71,239 @@
 (function(){
   const $=id=>document.getElementById(id);
   const el=(t,a={},k=[])=>{const n=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')n.className=v;else if(x==='text')n.textContent=v;else if(x==='html')n.innerHTML=v;else if(x.startsWith('on'))n.addEventListener(x.slice(2),v);else if(v===true)n.setAttribute(x,'');else if(v!==false&&v!=null)n.setAttribute(x,v);}for(const c of[].concat(k))if(c!=null)n.append(c);return n;};
-  const WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],MON=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
   const pad=n=>String(n).padStart(2,'0');
-  const sameTZ=Math.abs(new Date().getTimezoneOffset()+180)<1;
-  const loc=iso=>new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(iso));
-  const locDay=iso=>new Intl.DateTimeFormat('ru-RU',{weekday:'short',day:'numeric',month:'short'}).format(new Date(iso));
-  const dayLabel=ds=>{const[y,m,d]=ds.split('-').map(Number);const w=new Date(Date.UTC(y,m-1,d)).getUTCDay();return`${WD[w]}, ${d} ${MON[m-1]}`;};
+  const MON=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const fill=(s,o)=>String(s||'').replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
   const q=new URLSearchParams(location.search);
-  const prefill={name:q.get('name')||'',phone:q.get('phone')||''};
 
-  // метка визита для статистики воронки (без личных данных)
-  let sid='';try{sid=sessionStorage.getItem('zsid')||'';}catch(e){}
-  if(!sid){sid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,'0')).join('');try{sessionStorage.setItem('zsid',sid);}catch(e){}}
+  // ---------- часовой пояс клиента ----------
+  const ZONES=[['Europe/Kaliningrad','Калининград'],['Europe/Moscow','Москва'],['Europe/Samara','Самара'],['Asia/Yekaterinburg','Екатеринбург'],
+    ['Asia/Omsk','Омск'],['Asia/Novosibirsk','Новосибирск'],['Asia/Krasnoyarsk','Красноярск'],['Asia/Irkutsk','Иркутск'],['Asia/Yakutsk','Якутск'],
+    ['Asia/Vladivostok','Владивосток'],['Asia/Magadan','Магадан'],['Asia/Kamchatka','Камчатка']];
+  const offH=tz=>{try{const d=new Date();const p=new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'shortOffset'}).formatToParts(d).find(x=>x.type==='timeZoneName').value;const m=p.match(/GMT([+-]\d+)(?::(\d+))?/);return m?+m[1]+(m[2]?Math.sign(+m[1])*m[2]/60:0):0;}catch(e){return 3;}};
+  const tzLabel=tz=>{const z=ZONES.find(x=>x[0]===tz);const d=offH(tz)-3;return`${z?z[1]:tz.split('/').pop().replace(/_/g,' ')} (МСК${d===0?'':(d>0?'+':'')+d})`;};
+  let TZ='Europe/Moscow';try{TZ=Intl.DateTimeFormat().resolvedOptions().timeZone||TZ;}catch(e){}
+  const tFmt=(iso,o)=>new Intl.DateTimeFormat('ru-RU',{timeZone:TZ,...o}).format(new Date(iso));
+  const timeL=iso=>tFmt(iso,{hour:'2-digit',minute:'2-digit'});
+  const dayL=iso=>tFmt(iso,{weekday:'long',day:'numeric',month:'long'});
+  const dayShort=iso=>tFmt(iso,{weekday:'short',day:'numeric',month:'short'});
+  const whenL=iso=>`${dayL(iso)}, ${timeL(iso)}`;
+  function tzRow(onChange){
+    const sel=el('select',{'aria-label':'Ваш часовой пояс'});
+    const list=ZONES.some(z=>z[0]===TZ)?ZONES:[[TZ,TZ.split('/').pop()],...ZONES];
+    list.forEach(([z])=>sel.append(el('option',{value:z,text:tzLabel(z),selected:z===TZ})));
+    sel.onchange=()=>{TZ=sel.value;save();onChange&&onChange();};
+    return el('div',{class:'tzrow'},['Ваш часовой пояс:',sel]);
+  }
+
+  // ---------- состояние: продолжить с того же места ----------
+  const KEY='gg_v2';
+  let S={answers:{},step:0,form:{},token:''};
+  try{S=Object.assign(S,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
+  if(S.tz)TZ=S.tz;
+  function save(){S.tz=TZ;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+  // аналитика шагов (без личных данных)
+  let sid='';try{sid=localStorage.getItem('gg_sid')||'';}catch(e){}
+  if(!sid){sid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,'0')).join('');try{localStorage.setItem('gg_sid',sid);}catch(e){}}
   const track=ev=>{try{fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid,event:ev}),keepalive:true});}catch(e){}};
 
-  let F=null,answers={},step=0,days=[],day=null,pick=null;
+  let F=null,days=[],day=null,pick=null,moving=false;
   const show=(...kids)=>{$('screen').replaceChildren(el('div',{class:'screen flow',style:'padding:0'},kids));window.scrollTo(0,0);};
-  const progress=n=>el('div',{class:'progress','aria-label':`Шаг ${n} из 5`},[1,2,3,4,5].map(i=>el('i',{class:i<=n?'on':''})));
+  const progress=n=>el('div',{class:'progress','aria-label':`Шаг ${n} из 6`},[1,2,3,4,5,6].map(i=>el('i',{class:i<=n?'on':''})));
+  const planLine=()=>el('p',{class:'hint',text:F.plan_line});
+  const api=async(path,body)=>{const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error||'Не получилось. Попробуйте ещё раз.');e.status=r.status;throw e;}return j;};
 
+  // ---------- шаг 2: первый экран ----------
   function greeting(){
-    show(progress(0),el('div',{class:'msg'},[el('h1',{text:F.greeting.title}),F.greeting.text]),
-      el('button',{class:'btn big',type:'button',text:F.greeting.button,onclick:()=>{track('start');step=0;question();}}));
+    show(progress(0),el('div',{class:'card'},[el('h1',{text:F.greeting.title}),el('p',{text:F.greeting.text})]),
+      el('button',{class:'btn big',type:'button',text:F.greeting.button,onclick:()=>{track('start');S.step=0;save();question();}}));
   }
+
+  // ---------- шаг 3: анкета ----------
   function question(){
-    const Q=F.questions[step];
-    show(progress(step+1),
-      step===0?el('div',{class:'msg',text:F.intro}):null,
-      el('div',{class:'msg'},[el('div',{class:'step-n',text:`Вопрос ${step+1} из ${F.questions.length}`}),el('p',{class:'q',text:Q.text}),Q.hint?el('p',{class:'hint',text:Q.hint}):null]),
-      el('div',{class:'opts'},Q.options.map(o=>el('button',{class:'opt',type:'button',text:o.label,onclick:()=>{answers[Q.id]=o.id;step++;step<F.questions.length?question():result();}}))),
-      el('button',{class:'back',type:'button',text:'← Назад',onclick:()=>{if(step===0)greeting();else{step--;question();}}}));
+    const Q=F.questions[S.step],multi=Q.type==='multi';
+    let cur=multi?[...(S.answers[Q.id]||[])]:S.answers[Q.id];
+    const next=()=>{track('q_'+Q.id);S.step++;save();S.step<F.questions.length?question():offer();};
+    const go=el('button',{class:'btn big',type:'button',text:S.step===F.questions.length-1?'Продолжить':'Далее',disabled:multi&&!cur.length,onclick:()=>{S.answers[Q.id]=cur;save();next();}});
+    const opts=el('div',{class:'opts',role:multi?'group':'radiogroup'});
+    const draw=()=>opts.replaceChildren(...Q.options.map(o=>{
+      const on=multi?cur.includes(o.id):cur===o.id;
+      return el('button',{class:'opt',type:'button',role:multi?'checkbox':'radio','aria-checked':String(on),onclick:()=>{
+        if(!multi){S.answers[Q.id]=o.id;save();next();return;}
+        if(on)cur=cur.filter(x=>x!==o.id);
+        else{cur.push(o.id);const ex=o.excludes||[];cur=cur.filter(x=>!ex.includes(x));
+          cur=cur.filter(x=>!((Q.options.find(p=>p.id===x).excludes||[]).includes(o.id)));}
+        go.disabled=!cur.length;draw();}},[el('span',{class:'box','aria-hidden':'true',text:on?'✓':''}),o.label]);}));
+    draw();
+    show(progress(S.step+1),el('div',{class:'card'},[el('div',{class:'step-n',text:`Вопрос ${S.step+1} из ${F.questions.length}`}),el('p',{class:'q',text:Q.text}),Q.hint?el('p',{class:'hint',text:Q.hint}):null]),
+      opts,multi?go:null,
+      el('button',{class:'back',type:'button',text:'← Назад',onclick:()=>{if(S.step===0)greeting();else{S.step--;save();question();}}}));
   }
-  function scenario(a){
-    if(a.debt!=='gt500')return's7';
-    return{'yes|official':'s1','no|none':'s2','yes|business':'s3','yes|none':'s4','no|official':'s5','no|business':'s6'}[a.property+'|'+a.work];
+
+  // ---------- шаг 4: предложение получить план ----------
+  function offer(){
+    track('offer');S.stage='offer';save();
+    show(progress(4),el('div',{class:'card offer'},[el('h2',{text:F.offer.title}),el('p',{text:F.offer.text}),
+        el('button',{class:'btn big',type:'button',text:F.offer.button_slot,onclick:()=>{track('branch_slot');slots();}}),
+        el('button',{class:'btn ghost big',type:'button',text:F.offer.button_request,onclick:()=>{track('branch_request');requestForm();}})]),
+      el('p',{class:'how',text:fill(F.offer.how,{duration:F.duration})}),
+      el('button',{class:'back',type:'button',text:'← Изменить ответы',onclick:()=>{S.step=0;save();question();}}));
   }
-  function result(){
-    track('quiz_done');
-    show(progress(4),el('div',{class:'msg result',text:F.scenarios[scenario(answers)].text}),
-      el('div',{class:'offer'},[el('h2',{text:F.offer.title}),el('p',{text:F.offer.text}),
-        el('button',{class:'btn big',type:'button',text:F.offer.button,onclick:slots})]),
-      el('button',{class:'back',type:'button',text:'← Пройти опрос заново',onclick:()=>{answers={};step=0;question();}}));
-  }
+
+  // ---------- шаг 5А: дата и время ----------
   async function slots(){
-    try{const r=await fetch('/api/slots');if(!r.ok)throw 0;days=(await r.json()).days;}catch(e){show(el('p',{class:'err',text:'Не получилось загрузить свободное время. Обновите страницу.'}));return;}
+    try{days=(await api('/api/slots')).days;}catch(e){show(el('p',{class:'err',text:'Не получилось загрузить свободное время. Обновите страницу.'}));return;}
     renderSlots();
   }
-  const freeCount=d=>d.slots.filter(s=>s.free).length;
+  const freeN=d=>d.slots.filter(s=>s.free).length;
   function renderSlots(){
-    if(!day||!days.find(d=>d.date===day)||!freeCount(days.find(d=>d.date===day)))day=(days.find(d=>freeCount(d))||days[0]||{}).date;
+    if(!day||!days.find(d=>d.date===day)||!freeN(days.find(d=>d.date===day)))day=(days.find(d=>freeN(d))||days[0]||{}).date;
     const cur=days.find(d=>d.date===day);
-    show(progress(5),el('div',{class:'msg',text:'Выберите удобный день и время — я позвоню вам по телефону. Звоню с понедельника по пятницу.'}),
-      el('p',{class:'label',text:'День'}),
-      el('div',{class:'days'},days.map(d=>{const n=freeCount(d);return el('button',{type:'button',class:'day','aria-pressed':String(d.date===day),disabled:!n,onclick:()=>{day=d.date;pick=null;renderSlots();}},[el('b',{text:dayLabel(d.date)}),el('small',{class:'tnum',text:n?`свободно: ${n}`:'всё занято'})]);})),
-      el('p',{class:'label',text:'Время'}),
-      el('div',{class:'times'},(cur?cur.slots:[]).map(s=>el('button',{type:'button',class:'time',disabled:!s.free,'aria-pressed':String(!!pick&&pick.date===day&&pick.hour===s.hour),onclick:()=>{pick={date:day,hour:s.hour,start:s.start};contacts();}},[
-        el('b',{class:'tnum',text:`${pad(s.hour)}:00 МСК`}),el('small',{class:'tnum',text:s.free?(sameTZ?'по Москве':`у вас ${loc(s.start)}`):'занято'})]))),
-      el('button',{class:'back',type:'button',text:'← Назад',onclick:result}));
+    const anyFree=days.some(d=>freeN(d));
+    show(progress(5),el('div',{class:'card'},[el('p',{class:'q',text:moving?'Выберите новое время консультации.':F.slots.title}),tzRow(renderSlots)]),
+      anyFree?el('p',{class:'label',text:'День'}):el('p',{class:'note',text:'Свободного времени на ближайшие дни нет — менеджер подберёт время с вами.'}),
+      anyFree?el('div',{class:'days'},days.map(d=>{const n=freeN(d),first=d.slots[0];return el('button',{type:'button',class:'day','aria-pressed':String(d.date===day),disabled:!n,onclick:()=>{day=d.date;renderSlots();}},[el('b',{text:dayShort(first.start)}),el('small',{class:'tnum',text:n?`свободно: ${n}`:'нет мест'})]);})):null,
+      anyFree?el('p',{class:'label',text:'Время'}):null,
+      anyFree?el('div',{class:'times'},(cur?cur.slots:[]).map(s=>el('button',{type:'button',class:'time',disabled:!s.free,onclick:()=>{pick={date:day,hour:s.hour,start:s.start};track('slot_pick');moving?doMove():contactForm();}},[
+        el('b',{class:'tnum',text:timeL(s.start)}),el('small',{class:'tnum',text:s.free?(TZ==='Europe/Moscow'?'по Москве':`${pad(s.hour)}:00 по Москве`):'недоступно'})]))):null,
+      moving?null:el('button',{class:'btn ghost',type:'button',text:F.slots.not_found,onclick:()=>{track('branch_request');requestForm();}}),
+      el('button',{class:'back',type:'button',text:'← Назад',onclick:()=>moving?(moving=false,openBooking(S.token)):offer()}));
   }
-  // Телефон: только российские мобильные. Маска +7 (912) 345-67-89; 7 или 8 в начале — код страны.
-  function phoneNational(v){v=String(v||'').trim();let d=v.replace(/\D/g,'');
-    if(/^\+\s*7/.test(v))d=d.slice(1);        // «+7 …» — код страны
-    if(d&&'78'.includes(d[0]))d=d.slice(1);   // «8 912 …», «7912…» или 8 после подставленного +7
-    return d.slice(0,10);}
-  const phoneForeign=v=>/^\s*\+\s*[0-689]/.test(String(v||''));  // +380, +375… — не российский, не маскируем
+
+  // ---------- телефон: только российские мобильные ----------
+  function phoneNational(v){v=String(v||'').trim();let d=v.replace(/\D/g,'');if(/^\+\s*7/.test(v))d=d.slice(1);if(d&&'78'.includes(d[0]))d=d.slice(1);return d.slice(0,10);}
+  const phoneForeign=v=>/^\s*\+\s*[0-689]/.test(String(v||''));
   function phoneMask(v,del){if(phoneForeign(v))return String(v).replace(/[^\d+\s()-]/g,'');const d=phoneNational(v);if(!d)return !del&&/\d|\+/.test(v)?'+7 (':'';let s='+7 ('+d.slice(0,3);
     if(d.length>3)s+=') '+d.slice(3,6);if(d.length>6)s+='-'+d.slice(6,8);if(d.length>8)s+='-'+d.slice(8,10);return s;}
   function phoneValid(v){if(phoneForeign(v))return false;const d=phoneNational(v);return d.length===10&&d[0]==='9'&&new Set(d).size>2;}
-  function contacts(){
-    const name=el('input',{id:'f-name',autocomplete:'name',value:prefill.name}),phone=el('input',{id:'f-phone',type:'tel',inputmode:'tel',autocomplete:'tel',placeholder:'+7 (912) 345-67-89',value:phoneMask(prefill.phone)});
-    const phoneErr=el('small',{class:'ferr',id:'f-phone-err',hidden:true,text:'Нужен российский мобильный: +7 (9XX) и ещё 7 цифр, например +7 (912) 345-67-89.'});
-    // msg=false — только красная рамка (без сдвига вёрстки, чтобы не промахнуться по галочке на телефоне)
-    const markPhone=(on,msg=true)=>{phone.setAttribute('aria-invalid',on?'true':'false');if(!on)phoneErr.hidden=true;else if(msg)phoneErr.hidden=false;};
-    phone.setAttribute('aria-describedby','f-phone-err');
-    phone.addEventListener('input',e=>{phone.value=phoneMask(phone.value,/^delete/.test(e.inputType||''));if(phone.getAttribute('aria-invalid')==='true'&&phoneValid(phone.value))markPhone(false);});
+
+  // ---------- общая форма контактов (6А и 5Б) ----------
+  function contactFields(){
+    const fv=S.form||{};
+    const name=el('input',{id:'f-name',autocomplete:'name',value:fv.name||''}),city=el('input',{id:'f-city',autocomplete:'address-level2',value:fv.city||''});
+    const phone=el('input',{id:'f-phone',type:'tel',inputmode:'tel',autocomplete:'tel',placeholder:'+7 (912) 345-67-89',value:phoneMask(fv.phone||'')});
+    const phoneErr=el('small',{class:'ferr',hidden:true,text:'Нужен российский мобильный: +7 (9XX) и ещё 7 цифр.'});
+    const mark=(on,m=true)=>{phone.setAttribute('aria-invalid',on?'true':'false');if(!on)phoneErr.hidden=true;else if(m)phoneErr.hidden=false;};
+    phone.addEventListener('input',e=>{phone.value=phoneMask(phone.value,/^delete/.test(e.inputType||''));if(phone.getAttribute('aria-invalid')==='true'&&phoneValid(phone.value))mark(false);});
     phone.addEventListener('focus',()=>{if(!phone.value)phone.value='+7 (';});
-    phone.addEventListener('blur',()=>{if(!phoneNational(phone.value))phone.value='';markPhone(!!phone.value&&!phoneValid(phone.value),false);});
-    const web=el('input',{id:'f-web',tabindex:'-1',autocomplete:'off'}),consent=el('input',{type:'checkbox',id:'f-consent'}),err=el('p',{class:'err',hidden:true});
-    const go=el('button',{class:'btn big',type:'submit',text:'Записаться'});
-    const form=el('form',{class:'form',novalidate:true},[
-      el('p',{style:'margin:0'},['Вы выбрали: ',el('b',{class:'tnum',text:`${dayLabel(pick.date)}, ${pad(pick.hour)}:00 по Москве`}),sameTZ?null:el('span',{class:'tnum',text:` (у вас ${locDay(pick.start)}, ${loc(pick.start)})`})]),
-      el('div',{class:'field'},[el('label',{for:'f-name',text:'Как к вам обращаться'}),name]),
-      el('div',{class:'field'},[el('label',{for:'f-phone',text:'Телефон для звонка'}),phone,phoneErr]),
+    phone.addEventListener('blur',()=>{if(!phoneNational(phone.value))phone.value='';mark(!!phone.value&&!phoneValid(phone.value),false);});
+    let msg=fv.messenger||'';
+    const contact=el('input',{id:'f-contact',autocomplete:'off',value:fv.contact||''});
+    const contactWrap=el('div',{class:'field'},[el('label',{for:'f-contact'}),contact]);
+    const chips=el('div',{class:'chipset',role:'radiogroup','aria-label':'Мессенджер'});
+    const drawChips=()=>{chips.replaceChildren(...F.messengers.map(m=>el('button',{type:'button',role:'radio','aria-checked':String(m.id===msg),text:m.label,onclick:()=>{msg=m.id;drawChips();}})));
+      const m=F.messengers.find(x=>x.id===msg);contactWrap.hidden=!(m&&m.contact==='telegram');
+      if(m&&m.contact==='telegram'){contactWrap.firstChild.textContent=m.contact_label;contact.placeholder=m.placeholder||'';}};
+    drawChips();
+    const consent=el('input',{type:'checkbox',id:'f-consent'}),web=el('input',{id:'f-web',tabindex:'-1',autocomplete:'off'});
+    const nodes=[el('div',{class:'field'},[el('label',{for:'f-name',text:'Как к вам обращаться?'}),name]),
+      el('div',{class:'field'},[el('label',{for:'f-city',text:'Ваш город'}),city]),
+      el('div',{class:'field'},[el('label',{for:'f-phone',text:'Телефон'}),phone,phoneErr]),
+      el('div',{class:'field'},[el('label',{text:'В каком мессенджере вам удобно получить сообщение?'}),chips]),contactWrap,
+      el('p',{class:'note',style:'margin:0',text:'Вам напишет менеджер «'+F.brand+'» с аккаунта '+F.manager_account+'.'}),
       el('div',{class:'hp','aria-hidden':'true'},[el('label',{for:'f-web',text:'Не заполняйте'}),web]),
-      el('label',{class:'check'},[consent,el('span',{},['Согласна(ен) на обработку персональных данных. ',el('a',{href:F.privacy_url,target:'_blank',rel:'noopener',text:'Документ'})])]),
-      err,go]);
-    form.addEventListener('submit',async e=>{
-      e.preventDefault();err.hidden=true;
-      const b={date:pick.date,hour:pick.hour,name:name.value.trim(),phone:phone.value.trim(),consent:consent.checked,website:web.value,quiz:answers};
-      if(!b.name||!b.phone){err.textContent='Укажите имя и телефон.';err.hidden=false;return;}
-      if(!phoneValid(b.phone)){markPhone(true);phone.focus();return;}
-      if(!b.consent){err.textContent='Отметьте согласие на обработку данных — без него записать не получится.';err.hidden=false;return;}
-      go.disabled=true;
-      try{
-        const r=await fetch('/api/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-        const j=await r.json().catch(()=>({}));
-        if(!r.ok){err.textContent=j.error||'Не получилось записаться. Попробуйте ещё раз.';err.hidden=false;if(r.status===409){pick=null;setTimeout(slots,1500);}return;}
-        done(j);
-      }catch(ex){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';err.hidden=false;}
-      finally{go.disabled=false;}
-    });
-    show(progress(5),form,el('button',{class:'back',type:'button',text:'← Выбрать другое время',onclick:renderSlots}));
-    setTimeout(()=>(name.value?phone:name).focus(),0);
+      el('label',{class:'check'},[consent,el('span',{},[F.consent_text+' ',el('a',{href:F.privacy_url,target:'_blank',rel:'noopener',text:'Документ'})])])];
+    const collect=()=>{const v={name:name.value.trim(),city:city.value.trim(),phone:phone.value.trim(),messenger:msg,contact:contact.value.trim()};S.form=v;save();
+      return Object.assign({},v,{tz:TZ,consent:consent.checked,website:web.value,quiz:S.answers});};
+    const check=v=>{if(!v.name)return'Укажите, как к вам обращаться.';if(!v.city)return'Укажите ваш город.';if(!phoneValid(v.phone)){mark(true);return'Проверьте номер телефона.';}
+      if(!v.messenger)return'Выберите мессенджер для связи.';if(!v.consent)return'Отметьте согласие на обработку персональных данных.';return'';};
+    [name,city,contact].forEach(i=>i.addEventListener('change',()=>collect()));
+    return{nodes,collect,check,first:()=>(name.value?(city.value?phone:city):name)};
   }
-  // Ссылка на запись: ?b=<token>. Её открывает «⋯ → Открыть в браузере» в Instagram и её можно скопировать.
-  function bookingUrl(token){const u=new URL(location.href);u.search='?b='+encodeURIComponent(token);u.hash='';return u.href;}
-  async function copyText(text,input){
-    try{await navigator.clipboard.writeText(text);return true;}catch(e){}
-    try{input.focus();input.select();input.setSelectionRange(0,text.length);if(document.execCommand('copy'))return true;}catch(e){}
-    return false;
-  }
-  function done(j){
-    const ig=/Instagram|FBAN|FBAV|FB_IAB/i.test(navigator.userAgent);
-    let link=null;
-    if(j.token){link=bookingUrl(j.token);try{history.replaceState(null,'',link);}catch(e){}}
-    let copyBox=null;
-    if(link){
-      const inp=el('input',{class:'linkbox',readonly:true,value:link,'aria-label':'Ссылка на вашу запись',onclick:e=>e.target.select()});
-      const btn=el('button',{class:'btn ghost',type:'button',text:'Скопировать ссылку'});
-      btn.onclick=async()=>{const ok=await copyText(link,inp);btn.textContent=ok?'Скопировано ✓':'Выделите ссылку и скопируйте';setTimeout(()=>btn.textContent='Скопировать ссылку',2500);};
-      copyBox=el('div',{class:'copybox'},[
-        el('p',{class:'note',style:'margin:0',text:'Календарь не открывается? Скопируйте ссылку и вставьте её в Safari или Chrome — там откроется ваша запись с кнопками календаря.'}),
-        inp,btn]);
-    }
-    show(el('div',{class:'done'},[el('h2',{text:'Вы записаны'}),
-      el('p',{class:'tnum',style:'margin:0;font-weight:600',text:`${dayLabel(j.date)}, ${pad(j.hour)}:00 по Москве`+(sameTZ?'':` — у вас ${locDay(j.start)}, ${loc(j.start)}`)}),
-      el('div',{class:'msg',text:F.done}),
-      el('p',{class:'note',text:'Добавьте звонок в календарь телефона — он напомнит за час.'}),
-      el('div',{class:'row'},[el('a',{class:'btn',href:j.ics,text:'Добавить в календарь'}),el('a',{class:'btn ghost',href:j.gcal,target:'_blank',rel:'noopener',text:'Google Календарь'})]),
-      ig?el('p',{class:'note',html:'В Instagram календарь может не открыться. Нажмите <b>⋯</b> в правом верхнем углу → «Открыть в браузере» — запись откроется там же, на этом экране.'}):null,
-      copyBox]));
+  function submitForm(nodes,btnText,onSend){
+    const err=el('p',{class:'err',hidden:true}),go=el('button',{class:'btn big',type:'submit',text:btnText});
+    const form=el('form',{class:'form',novalidate:true},[...nodes,err,go]);
+    form.addEventListener('submit',async e=>{e.preventDefault();err.hidden=true;go.disabled=true;
+      try{await onSend();}catch(ex){err.textContent=ex.message||'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';err.hidden=false;}finally{go.disabled=false;}});
+    return form;
   }
 
-  (async()=>{
-    try{const r=await fetch('/api/funnel');if(!r.ok)throw 0;F=await r.json();}catch(e){$('loading').hidden=true;$('loaderr').hidden=false;return;}
-    $('loading').hidden=true;$('expert').textContent=F.expert;$('ava').textContent=F.expert.split(' ').map(w=>w[0]).join('').slice(0,2);
-    const bt=q.get('b');
-    if(bt){  // открыли ссылку на уже сделанную запись
-      try{const r=await fetch('/api/booking/'+encodeURIComponent(bt));const j=await r.json().catch(()=>({}));
-        if(r.ok){done(j);return;}
-        show(el('div',{class:'msg',text:(j.error||'Запись не найдена.')+' Можно записаться заново.'}));
-        try{history.replaceState(null,'',location.pathname);}catch(e){}
-        setTimeout(()=>{track('open');greeting();},1800);return;
-      }catch(e){}
+  // ---------- шаг 6А: подтверждение записи ----------
+  function contactForm(){
+    const cf=contactFields();
+    const form=submitForm(cf.nodes,'Подтвердить запись',async()=>{
+      const v=cf.collect(),bad=cf.check(v);if(bad)throw new Error(bad);
+      try{const j=await api('/api/book',Object.assign(v,{date:pick.date,hour:pick.hour}));track('booked');S.token=j.token;S.stage='done';save();bookingPage(j,true);}
+      catch(ex){if(ex.status===409){setTimeout(slots,1600);}throw ex;}
+    });
+    show(progress(6),el('div',{class:'card'},[el('div',{class:'step-n',text:'Ваша консультация'}),el('p',{class:'q',text:whenL(pick.start)}),el('p',{class:'hint',text:tzLabel(TZ)+' · '+F.meeting_format+', '+F.duration}),
+      el('p',{class:'q',style:'font-size:16px;margin-top:6px',text:'Куда отправить подтверждение записи, ссылку на консультацию и напоминания?'}),form]),
+      el('button',{class:'back',type:'button',text:'← Выбрать другое время',onclick:renderSlots}));
+    setTimeout(()=>cf.first().focus(),0);
+  }
+
+  // ---------- шаг 5Б: заявка на подбор времени ----------
+  function requestForm(){
+    const cf=contactFields();
+    const form=submitForm(cf.nodes,F.request.button,async()=>{
+      const v=cf.collect(),bad=cf.check(v);if(bad)throw new Error(bad);
+      const j=await api('/api/request',v);track('requested');S.token=j.token;S.stage='done';save();bookingPage(j,true);
+    });
+    show(progress(5),el('div',{class:'card'},[el('h2',{text:F.request.title}),el('p',{text:F.request.text}),planLine(),form]),
+      el('button',{class:'back',type:'button',text:'← Назад',onclick:offer}));
+    setTimeout(()=>cf.first().focus(),0);
+  }
+
+  // ---------- шаг 7: страница заявки (по ссылке ?b=…) ----------
+  function bookingUrl(token){const u=new URL(location.href);u.search='?b='+encodeURIComponent(token);u.hash='';return u.href;}
+  async function copyText(text,input){try{await navigator.clipboard.writeText(text);return true;}catch(e){}try{input.focus();input.select();if(document.execCommand('copy'))return true;}catch(e){}return false;}
+  async function openBooking(token){
+    try{bookingPage(await api('/api/booking/'+encodeURIComponent(token)));}
+    catch(e){S.token='';save();show(el('div',{class:'card'},[el('p',{text:'Запись не найдена. Можно пройти анкету заново.'})]),el('button',{class:'btn big',type:'button',text:F.greeting.button,onclick:greeting}));}
+  }
+  function bookingPage(j,fresh){
+    moving=false;
+    const link=bookingUrl(j.token);try{history.replaceState(null,'',link);}catch(e){}
+    if(j.tz&&!S.tz)TZ=j.tz;
+    const ig=/Instagram|FBAN|FBAV|FB_IAB/i.test(navigator.userAgent);
+    const account=F.manager_account,sendTo=fill(F.booked.send_to,{messenger:j.messenger||'мессенджер',contact:j.contact||'ваш номер',account});
+    let head,body=[],actions=[];
+    if(j.status==='cancelled'){
+      head=[el('span',{class:'status off',text:'Запись отменена'}),el('h2',{text:'Ваша запись отменена'}),el('p',{text:'Если захотите вернуться к вопросу, можно записаться снова.'})];
+      actions=[el('button',{class:'btn big',type:'button',text:F.offer.button_slot,onclick:()=>{S.token='';S.stage='offer';save();slots();}})];
+    }else if(j.status==='pending'){
+      head=[el('span',{class:'status',text:'Ожидает согласования времени'}),el('h2',{text:F.request.done_title}),
+        el('p',{text:fill(F.request.done_text,{messenger:j.messenger,contact:j.contact,account})}),el('p',{class:'hint',text:F.request.wait}),el('p',{class:'hint',text:F.request.after})];
+    }else{
+      head=[el('span',{class:'status ok',text:'Запись подтверждена'}),el('h2',{text:fresh?F.booked.title:'Ваша консультация'})];
+      body=[el('dl',{class:'kv'},[el('dt',{text:'Дата'}),el('dd',{text:dayL(j.start)}),el('dt',{text:'Время'}),el('dd',{class:'tnum',text:timeL(j.start)+' · '+tzLabel(TZ)}),
+          el('dt',{text:'Формат'}),el('dd',{text:F.meeting_format+', '+j.duration}),
+          j.manager?el('dt',{text:'Специалист'}):null,j.manager?el('dd',{text:j.manager}):null,
+          el('dt',{text:'Ссылка'}),el('dd',{},j.meeting_link?el('a',{href:j.meeting_link,target:'_blank',rel:'noopener',text:'Подключиться к встрече'}):'менеджер пришлёт перед встречей')]),
+        el('p',{text:sendTo})];
+      actions=[el('div',{class:'row'},[el('a',{class:'btn',href:j.ics,text:'Добавить в календарь'}),el('a',{class:'btn ghost',href:j.gcal,target:'_blank',rel:'noopener',text:'Google Календарь'})]),
+        ig?el('p',{class:'note',html:'В Instagram календарь может не открыться. Нажмите <b>⋯</b> → «Открыть в браузере» — запись откроется там же.'}):null];
     }
-    track('open');greeting();
+    const conf=el('div',{class:'confirm',hidden:true},[el('span',{text:'Отменить запись? Время освободится для других.'}),el('div',{class:'row'},[
+      el('button',{class:'btn danger',type:'button',text:'Да, отменить',onclick:async()=>{try{bookingPage(await api('/api/booking/'+j.token+'/cancel',{}));}catch(e){}}}),
+      el('button',{class:'btn ghost',type:'button',text:'Нет',onclick:()=>conf.hidden=true})])]);
+    const manage=j.status==='cancelled'?null:el('div',{class:'row'},[
+      j.status==='booked'?el('button',{class:'btn ghost small',type:'button',text:'Перенести',onclick:async()=>{moving=true;S.token=j.token;await slots();}}):null,
+      el('button',{class:'btn ghost small',type:'button',text:'Отменить',onclick:()=>conf.hidden=false})]);
+    const inp=el('input',{class:'linkbox',readonly:true,value:link,'aria-label':'Ссылка на вашу запись',onclick:e=>e.target.select()});
+    const cbtn=el('button',{class:'btn ghost small',type:'button',text:'Скопировать ссылку'});
+    cbtn.onclick=async()=>{const ok=await copyText(link,inp);cbtn.textContent=ok?'Скопировано ✓':'Выделите и скопируйте';setTimeout(()=>cbtn.textContent='Скопировать ссылку',2500);};
+    show(el('div',{class:'card'},[...head,...body,...actions,j.status!=='cancelled'?planLine():null]),manage,conf,
+      el('div',{class:'copybox'},[el('p',{class:'note',style:'margin:0',text:'Сохраните ссылку на вашу запись — по ней всегда можно посмотреть время, добавить в календарь, перенести или отменить.'}),inp,cbtn]));
+  }
+  async function doMove(){
+    try{const j=await api('/api/booking/'+S.token+'/move',{date:pick.date,hour:pick.hour});bookingPage(j);}
+    catch(e){await slots();alertBox(e.message);}
+  }
+  function alertBox(t){const n=el('p',{class:'err',text:t});$('screen').prepend(n);}
+
+  // ---------- старт ----------
+  (async()=>{
+    try{F=await api('/api/funnel');}catch(e){$('loading').hidden=true;$('loaderr').hidden=false;return;}
+    $('loading').hidden=true;$('brand').textContent=F.brand;$('brandsub').textContent=F.brand_sub;document.title=F.brand+' — личный план по долгам';
+    if(F.logo){$('logo').replaceChildren(el('img',{src:F.logo,alt:''}));}else $('logo').textContent=F.brand.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const bt=q.get('b')||S.token;
+    if(bt){S.token=bt;save();return openBooking(bt);}
+    track('open');
+    if(S.stage==='offer'&&Object.keys(S.answers).length===F.questions.length)return offer();   // вернулся после анкеты
+    if(S.step>0&&S.step<F.questions.length)return question();
+    greeting();
   })();
 })();
 </script>

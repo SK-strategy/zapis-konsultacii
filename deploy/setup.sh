@@ -37,22 +37,30 @@ mkdir -p "$DATA/backups"
 chown -R zapis:zapis "$DATA"
 git config --global --add safe.directory "$APP" || true
 
-say "3/7 Логины менеджеров"
+say "3/7 Кабинеты"
+SECURE=1; [ -z "$DOMAIN" ] && SECURE=0
 if [ ! -f "$ENVF" ]; then
-  echo "Введите логины менеджеров в формате  логин:пароль:Имя;логин2:пароль2:Имя2"
-  echo "(в паролях не используйте символы : ; и кавычки)"
-  read -r -p "ADMIN_USERS = " ADMIN_USERS </dev/tty
-  SECURE=1; [ -z "$DOMAIN" ] && SECURE=0
   umask 077
-  cat > "$ENVF" <<EOF
-DATA_DIR=$DATA
-COOKIE_SECURE=$SECURE
-ADMIN_USERS='$ADMIN_USERS'
-EOF
+  printf 'DATA_DIR=%s\nCOOKIE_SECURE=%s\n' "$DATA" "$SECURE" > "$ENVF"
   chown root:zapis "$ENVF"; chmod 640 "$ENVF"
+elif [ -n "$DOMAIN" ]; then
+  sed -i 's/^COOKIE_SECURE=.*/COOKIE_SECURE=1/' "$ENVF"
+fi
+manage() { (cd "$APP/server" && sudo -u zapis env DATA_DIR="$DATA" MANAGE_PASSWORD="${PW:-}" "$APP/venv/bin/python" manage.py "$@"); }
+ask_pw() {  # пароль вводится скрыто и нигде не сохраняется в открытом виде
+  while :; do
+    read -r -s -p "  пароль для «$1» (логин $2, от 8 символов): " PW </dev/tty; echo
+    [ ${#PW} -ge 8 ] && break; echo "  слишком короткий, ещё раз"
+  done
+}
+if [ -z "$(manage list-users 2>/dev/null)" ]; then
+  echo "Создаю кабинеты. Логины: admin, natalya, roman."
+  ask_pw "Кабинет админа" admin;     manage ensure-user admin "Админ" admin
+  ask_pw "Менеджер Наталья" natalya; manage ensure-user natalya "Наталья" manager
+  ask_pw "Менеджер Роман" roman;     manage ensure-user roman "Роман" manager
+  PW=""
 else
-  echo "Файл $ENVF уже есть — логины не трогаю (сменить пароль: см. README, manage.py)."
-  if [ -n "$DOMAIN" ]; then sed -i 's/^COOKIE_SECURE=.*/COOKIE_SECURE=1/' "$ENVF"; fi
+  echo "Кабинеты уже есть:"; manage list-users
 fi
 
 say "4/7 Служба приложения"
