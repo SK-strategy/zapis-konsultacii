@@ -107,7 +107,10 @@
   // аналитика шагов (без личных данных)
   let sid='';try{sid=localStorage.getItem('gg_sid')||'';}catch(e){}
   if(!sid){sid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,'0')).join('');try{localStorage.setItem('gg_sid',sid);}catch(e){}}
-  const track=ev=>{try{fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid,event:ev}),keepalive:true});}catch(e){}};
+  // UTM-метки: запоминаем, с какой ссылки пришёл человек (последняя ссылка с меткой важнее)
+  let UTM={};try{UTM=JSON.parse(localStorage.getItem('gg_utm')||'{}')||{};}catch(e){}
+  {const q=new URLSearchParams(location.search);if(q.get('utm_source')){UTM={};['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{const v=q.get(k);if(v)UTM[k]=v.slice(0,100);});try{localStorage.setItem('gg_utm',JSON.stringify(UTM));}catch(e){}}}
+  const track=ev=>{try{fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sid,event:ev,utm:UTM}),keepalive:true});}catch(e){}};
 
   let F=null,days=[],day=null,pick=null,moving=false;
   const show=(...kids)=>{$('screen').replaceChildren(el('div',{class:'screen flow',style:'padding:0'},kids));window.scrollTo(0,0);};
@@ -207,7 +210,7 @@
       el('div',{class:'hp','aria-hidden':'true'},[el('label',{for:'f-web',text:'Не заполняйте'}),web]),
       el('label',{class:'check'},[consent,el('span',{},[F.consent_text+' ',el('a',{href:F.privacy_url,target:'_blank',rel:'noopener',text:'Документ'})])])];
     const collect=()=>{const v={name:name.value.trim(),city:city.value.trim(),phone:phone.value.trim(),messenger:msg,contact:contact.value.trim()};S.form=v;save();
-      return Object.assign({},v,{tz:TZ,consent:consent.checked,website:web.value,quiz:S.answers});};
+      return Object.assign({},v,{tz:TZ,consent:consent.checked,website:web.value,quiz:S.answers,utm:UTM});};
     const check=v=>{if(!v.name)return'Укажите, как к вам обращаться.';if(!v.city)return'Укажите ваш город.';if(!phoneValid(v.phone)){mark(true);return'Проверьте номер телефона.';}
       if(!v.messenger)return'Выберите мессенджер для связи.';if(!v.consent)return'Отметьте согласие на обработку персональных данных.';return'';};
     [name,city,contact].forEach(i=>i.addEventListener('change',()=>collect()));

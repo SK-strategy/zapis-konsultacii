@@ -31,6 +31,23 @@ QUESTIONS = {q["id"]: q for q in FUNNEL["questions"]}
 MESSENGERS = {m["id"]: m for m in FUNNEL["messengers"]}
 SOURCES, SERVICES = FUNNEL["sources"], FUNNEL["services"]
 SITE_SOURCE = SOURCES[0]
+UTM_MAP = {k.lower(): v for k, v in FUNNEL.get("utm_sources", {}).items() if not k.startswith("_")}
+UTM_KEYS = ("utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term")
+
+def clean_utm(u):
+    """UTM-метки из адреса, с которым человек пришёл (сохраняются в браузере до записи)."""
+    if not isinstance(u, dict): return {}
+    out = {}
+    for k in UTM_KEYS:
+        v = re.sub(r"[\x00-\x1f<>]", "", str(u.get(k) or "")).strip()[:100]
+        if v: out[k] = v
+    return out
+
+def resolve_source(utm_source):
+    """utm_source → источник: из таблицы соответствий, иначе сама метка (появится в аналитике отдельной строкой)."""
+    v = (utm_source or "").strip()
+    if not v: return SITE_SOURCE
+    return UTM_MAP.get(v.lower()) or v[:40]
 
 # события воронки (по одному на посетителя): порядок = шаги схемы
 FUNNEL_EVENTS = ("open", "start", "q_debt", "q_property", "q_work", "offer", "branch_slot", "branch_request",
@@ -80,7 +97,7 @@ CREATE TABLE IF NOT EXISTS bookings(
   client_id INTEGER NOT NULL REFERENCES clients(id),
   status TEXT NOT NULL DEFAULT 'booked',                                  -- booked | pending | cancelled
   origin TEXT NOT NULL DEFAULT 'site',                                    -- site | manager
-  lead_source TEXT DEFAULT '', service TEXT DEFAULT '',
+  lead_source TEXT DEFAULT '', service TEXT DEFAULT '', utm TEXT DEFAULT '',
   confirm TEXT DEFAULT '', attend TEXT DEFAULT '', meeting_link TEXT DEFAULT '', note TEXT DEFAULT '',
   city TEXT DEFAULT '', tz TEXT DEFAULT '', messenger TEXT DEFAULT '', contact TEXT DEFAULT '',
   consent_ver TEXT DEFAULT '', consent_at TEXT DEFAULT '', quiz TEXT DEFAULT '',
@@ -93,7 +110,7 @@ CREATE TABLE IF NOT EXISTS blocked(
   reason TEXT DEFAULT '', by INTEGER, PRIMARY KEY(slot, manager_id));
 CREATE TABLE IF NOT EXISTS day_notes(date TEXT PRIMARY KEY, text TEXT NOT NULL, by INTEGER, updated_at TEXT);
 CREATE TABLE IF NOT EXISTS events(
-  sid TEXT NOT NULL, event TEXT NOT NULL, day TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(sid, event));
+  sid TEXT NOT NULL, event TEXT NOT NULL, day TEXT NOT NULL, created_at TEXT NOT NULL, src TEXT DEFAULT '', PRIMARY KEY(sid, event));
 """
 
 def db():
@@ -129,6 +146,9 @@ def init_db():
         for ix in ("bookings_one_per_slot", "bookings_date", "bookings_client"):
             c.execute(f"DROP INDEX IF EXISTS {ix}")
     c.executescript(SCHEMA)
+    for t, col in (("bookings", "utm"), ("events", "src")):  # добавлено после запуска v2
+        if col not in {r[1] for r in c.execute(f"PRAGMA table_info({t})")}:
+            c.execute(f"ALTER TABLE {t} ADD COLUMN {col} TEXT DEFAULT ''")
     for login, pw, name, role in parse_users(os.environ.get("ADMIN_USERS", "")):
         if not c.execute("SELECT 1 FROM users WHERE login=?", (login,)).fetchone():
             c.execute("INSERT INTO users(login,name,pw_hash,role,public) VALUES(?,?,?,?,?)",
@@ -326,7 +346,8 @@ def api_track():
     sid, ev = str(b.get("sid") or "")[:40], b.get("event")
     if not re.fullmatch(r"[A-Za-z0-9_-]{8,40}", sid) or ev not in FUNNEL_EVENTS or rate_limited("track:" + client_ip(), 300, 3600):
         return jsonify(ok=False), 400
-    db().execute("INSERT OR IGNORE INTO events(sid,event,day,created_at) VALUES(?,?,?,?)", (sid, ev, today_msk().isoformat(), iso_now()))
+    src = resolve_source(clean_utm(b.get("utm")).get("utm_source"))
+    db().execute("INSERT OR IGNORE INTO events(sid,event,day,created_at,src) VALUES(?,?,?,?,?)", (sid, ev, today_msk().isoformat(), iso_now(), src))
     db().commit()
     return jsonify(ok=True)
 
@@ -364,8 +385,10 @@ def client_fields(b):
     if err: return None, err
     if not b.get("consent"): return None, "Отметьте согласие на обработку персональных данных — без него записать не получится."
     quiz = clean_quiz(b.get("quiz")) if b.get("quiz") else None
+    utm = clean_utm(b.get("utm"))
     return {"name": name, "city": city, "phone": phone, "tz": tz if TZ_RE.fullmatch(tz or "x") else "",
-            "messenger": m, "contact": contact, "quiz": quiz}, None
+            "messenger": m, "contact": contact, "quiz": quiz,
+            "lead_source": resolve_source(utm.get("utm_source")), "utm": json.dumps(utm, ensure_ascii=False) if utm else ""}, None
 
 @app.post("/api/book")
 def api_book():
@@ -390,7 +413,7 @@ def api_book():
         if q: c.execute("UPDATE clients SET quiz=? WHERE id=?", (q, cid))
         token = new_token()
         insert_booking(c, {"kind": "slot", "slot": slot_id(date, hour), "date": date, "hour": hour, "manager_id": mgr,
-                           "client_id": cid, "status": "booked", "origin": "site", "lead_source": SITE_SOURCE,
+                           "client_id": cid, "status": "booked", "origin": "site", "lead_source": f["lead_source"], "utm": f["utm"],
                            "city": f["city"], "tz": f["tz"], "messenger": f["messenger"], "contact": f["contact"],
                            "consent_ver": FUNNEL["consent_version"], "consent_at": iso_now(), "quiz": q,
                            "token": token, "created_at": iso_now(), "updated_at": iso_now()})
@@ -415,7 +438,7 @@ def api_request():
     q = json.dumps(f["quiz"], ensure_ascii=False) if f["quiz"] else ""
     if q: c.execute("UPDATE clients SET quiz=? WHERE id=?", (q, cid))
     token = new_token()
-    insert_booking(c, {"kind": "request", "client_id": cid, "status": "pending", "origin": "site", "lead_source": SITE_SOURCE,
+    insert_booking(c, {"kind": "request", "client_id": cid, "status": "pending", "origin": "site", "lead_source": f["lead_source"], "utm": f["utm"],
                        "city": f["city"], "tz": f["tz"], "messenger": f["messenger"], "contact": f["contact"],
                        "consent_ver": FUNNEL["consent_version"], "consent_at": iso_now(), "quiz": q,
                        "token": token, "created_at": iso_now(), "updated_at": iso_now()})
@@ -553,6 +576,7 @@ def booking_row(r):
                               "confirm", "attend", "meeting_link", "note", "city", "tz", "messenger", "contact",
                               "consent_ver", "consent_at", "created_at", "token")} | {
         "manager": r["manager_name"], "created_by": r["created_by_name"],
+        "utm": json.loads(r["utm"]) if r["utm"] else None,
         "quiz": json.loads(r["quiz"]) if r["quiz"] else None,
         "client": {"id": r["client_id"], "name": r["name"], "phone": r["phone"]}}
 
@@ -787,14 +811,17 @@ def stats():
     days = max(1, min(int(request.args.get("days", "7") or 7), 365))
     since = (today_msk() - dt.timedelta(days=days - 1)).isoformat()
     c = db()
-    ev = {e: c.execute("SELECT COUNT(*) FROM events WHERE event=? AND day>=?", (e, since)).fetchone()[0] for e in FUNNEL_EVENTS}
+    src = (request.args.get("src") or "").strip()
+    ev = {e: c.execute("SELECT COUNT(*) FROM events WHERE event=? AND day>=?" + (" AND src=?" if src else ""),
+                       (e, since) + ((src,) if src else ())).fetchone()[0] for e in FUNNEL_EVENTS}
+    srcs = [r[0] for r in c.execute("SELECT src FROM events WHERE day>=? AND src!='' GROUP BY src ORDER BY COUNT(*) DESC", (since,))]
     q = lambda sql, *a: c.execute(sql, (since,) + a).fetchone()[0]
     outcome = {"came": q("SELECT COUNT(*) FROM bookings WHERE attend IN ('came','nc') AND date>=?"),
                "noshow": q("SELECT COUNT(*) FROM bookings WHERE attend='noshow' AND date>=?"),
                "bought": q("SELECT COUNT(DISTINCT client_id) FROM bookings WHERE date>=? AND client_id IN (SELECT id FROM clients WHERE status='bought')")}
     by_source = [dict(r) for r in c.execute("SELECT lead_source AS name, COUNT(*) AS n FROM bookings WHERE status!='cancelled' AND substr(created_at,1,10)>=? "
                                             "GROUP BY lead_source ORDER BY n DESC", (since,))]
-    return jsonify(days=days, events=ev, outcome=outcome, by_source=by_source)
+    return jsonify(days=days, src=src, srcs=srcs, events=ev, outcome=outcome, by_source=by_source)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8000")), debug=False)

@@ -118,7 +118,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
 
 <main class="wrap" id="v-fun" hidden>
   <div class="ahead"><div><h1>Воронка</h1><p class="sub">Сколько людей дошли до каждого шага. Каждый человек считается один раз.</p></div>
-    <div class="ctrl"><select id="fdays" aria-label="Период"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option></select></div></div>
+    <div class="ctrl"><select id="fsrc" aria-label="Источник"><option value="">Все источники</option></select><select id="fdays" aria-label="Период"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option></select></div></div>
   <div class="cards" id="kpis"></div>
   <div class="fun" id="fun"></div>
   <h2 style="font:600 17px/1.3 var(--f-display);margin:8px 0 0">Источники записей</h2>
@@ -158,7 +158,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
 
   // ---------- панель ----------
   let lastFocus=null;
-  function openSheet(kids){lastFocus=document.activeElement;$('sheet').replaceChildren(...kids);$('panel').hidden=false;const f=$('sheet').querySelector('input,textarea,select,button');f&&f.focus();}
+  function openSheet(kids){lastFocus=document.activeElement;$('sheet').replaceChildren(...kids.filter(k=>k!=null));$('panel').hidden=false;const f=$('sheet').querySelector('input,textarea,select,button');f&&f.focus();}
   function closeSheet(){$('panel').hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
   $('panel').addEventListener('click',e=>{if(e.target===$('panel'))closeSheet();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('panel').hidden)closeSheet();});
@@ -238,7 +238,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
     const m=errBox(),ok=el('span',{class:'saved',hidden:true,text:'Сохранено'});
     const patch=async b=>{try{await api('/api/admin/bookings/'+x.id,{method:'PATCH',body:b});Object.assign(x,b);ok.hidden=false;setTimeout(()=>ok.hidden=true,1200);(after||refresh)();}catch(e){showErr(m,e);throw e;}};
     const pending=x.status==='pending';
-    const src=sel('b-s',ME.sources,x.lead_source,'— не указан —');src.onchange=()=>patch({lead_source:src.value});
+    const src=sel('b-s',x.lead_source&&!ME.sources.includes(x.lead_source)?ME.sources.concat([[x.lead_source,x.lead_source+' (по метке)']]):ME.sources,x.lead_source,'— не указан —');src.onchange=()=>patch({lead_source:src.value});
     const svc=sel('b-v',ME.services,x.service,'— не указан —');svc.onchange=()=>patch({service:svc.value});
     const link=el('input',{id:'b-l',type:'url',placeholder:'https://…',value:x.meeting_link||''});link.onchange=()=>patch({meeting_link:link.value});
     const note=el('textarea',{id:'b-n',rows:2});note.value=x.note||'';note.onchange=()=>patch({note:note.value});
@@ -255,7 +255,8 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
         el('dt',{text:'Город'}),el('dd',{text:x.city||'—'}),
         el('dt',{text:'Связь'}),el('dd',{text:x.messenger?msgLabel(x.messenger)+' · '+(x.contact||fmtPhone(x.client.phone)):'—'}),
         el('dt',{text:'Откуда'}),el('dd',{text:x.origin==='site'?'записался сам на сайте':'записал(а) '+(x.created_by||'специалист')}),
-        x.consent_at?el('dt',{text:'Согласие'}):null,x.consent_at?el('dd',{class:'mt',text:`версия ${x.consent_ver}, ${new Date(x.consent_at).toLocaleString('ru-RU')}`}):null]),
+        x.consent_at?el('dt',{text:'Согласие'}):null,x.consent_at?el('dd',{class:'mt',text:`версия ${x.consent_ver}, ${new Date(x.consent_at).toLocaleString('ru-RU')}`}):null,
+        x.utm?el('dt',{text:'UTM'}):null,x.utm?el('dd',{class:'mt',text:Object.entries(x.utm).map(([k,v])=>k.replace('utm_','')+': '+v).join(' · ')}):null]),
       quizBox(x.quiz),
       pending?null:el('div',{class:'field'},[el('label',{text:'Подтверждение накануне / в день встречи'}),optset(ME.confirm,x.confirm,k=>patch({confirm:k}))]),
       pending?null:el('div',{class:'field'},[el('label',{text:'Пришёл'}),optset(ME.attend,x.attend,k=>patch({attend:k}))]),
@@ -310,7 +311,9 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
 
   // ---------- воронка ----------
   async function loadFunnel(){
-    const s=await api('/api/admin/stats?days='+$('fdays').value),e=s.events;
+    const fs=$('fsrc'),cur=fs.value;
+    const s=await api('/api/admin/stats?days='+$('fdays').value+(cur?'&src='+encodeURIComponent(cur):'')),e=s.events;
+    fs.replaceChildren(el('option',{value:'',text:'Все источники'}),...Array.from(new Set(s.srcs.concat(cur?[cur]:[]))).map(v=>el('option',{value:v,text:v,selected:v===cur})));
     const steps=[['Перешли на сайт',e.open],['Начали анкету',e.start],['Ответили на 1-й вопрос',e.q_debt],['Ответили на 2-й',e.q_property],['Ответили на 3-й',e.q_work],
       ['Увидели предложение',e.offer],['Выбрали «дату и время»',e.branch_slot],['Выбрали «с менеджером»',e.branch_request],['Выбрали слот',e.slot_pick],['Записались',e.booked],['Оставили заявку',e.requested]];
     const max=Math.max(1,e.open);
@@ -319,7 +322,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
     $('src').replaceChildren(el('thead',{},el('tr',{},[el('th',{text:'Источник'}),el('th',{text:'Записей и заявок'})])),
       el('tbody',{},s.by_source.length?s.by_source.map(r=>el('tr',{},[el('td',{text:r.name||'не указан'}),el('td',{class:'tnum',text:String(r.n)})])):el('tr',{},el('td',{colspan:2,class:'empty',text:'Пока пусто.'}))));
   }
-  $('fdays').onchange=loadFunnel;
+  $('fdays').onchange=loadFunnel;$('fsrc').onchange=loadFunnel;
 
   // ---------- вкладки ----------
   const TABS={sched:['t-sched','v-sched',()=>loadWeek()],req:['t-req','v-req',()=>loadReq()],crm:['t-crm','v-crm',()=>loadClients()],fun:['t-fun','v-fun',()=>loadFunnel()]};
