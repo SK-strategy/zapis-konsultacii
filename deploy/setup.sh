@@ -1,7 +1,7 @@
 #!/bin/bash
 # Установка сервиса записи на чистый сервер Ubuntu (24.04 / 26.04).
 # Запуск одной командой из консоли сервера (под root):
-#   curl -fsSL https://raw.githubusercontent.com/SK-strategy/zapis-konsultacii/main/deploy/setup.sh | bash -s -- губенко.онлайн
+#   curl -fsSL https://raw.githubusercontent.com/SK-strategy/zapis-konsultacii/main/deploy/setup.sh | bash -s -- gubenko-group.site
 # Можно без домена (тогда сайт будет по IP, без HTTPS):  ... | bash
 # Повторный запуск безопасен: обновит код и настройки, данные не трогает.
 set -euo pipefail

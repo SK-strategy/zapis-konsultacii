@@ -27,15 +27,15 @@
 
 ## UTM-метки и источники
 Добавьте к ссылке `?utm_source=...` — источник запишется в карточку и в «Воронку» сам:
-`https://губенко.онлайн/?utm_source=instagram` → «Нельзяграм (воронка)», `telegram`/`tg`/`max` → «Канал ТГ / MAX», `vk` → «ВК», `youtube` → «YouTube», `yandex`/`direct` → «Реклама», `2gis` → «Карты».
+`https://gubenko-group.site/?utm_source=instagram` → «Нельзяграм (воронка)», `telegram`/`tg`/`max` → «Канал ТГ / MAX», `vk` → «ВК», `youtube` → «YouTube», `yandex`/`direct` → «Реклама», `2gis` → «Карты».
 Таблица соответствий — `utm_sources` в `funnel.json`. Незнакомая метка (например, `utm_source=dzen`) попадёт в аналитику отдельной строкой как есть. Без метки — «Нельзяграм (воронка)». Метка запоминается: если человек ушёл и вернулся по ссылке без метки, источник сохранится. `utm_medium`, `utm_campaign` и остальные видны в карточке записи; воронку можно отфильтровать по источнику.
 
-**Короткие ссылки на своём домене:** `губенко.онлайн/ig`, `/tg`, `/max`, `/vk`, `/yt`, `/ya`, `/2gis`, `/site`, `/bot`, `/banner`, `/ok` — ведут на запись с нужной меткой. Кампания через слеш: `губенко.онлайн/ig/oktyabr`. Список — `short_links` в `funnel.json`, в кабинете — вкладка «Воронка» → «Короткие ссылки».
+**Короткие ссылки на своём домене:** `gubenko-group.site/ig`, `/tg`, `/max`, `/vk`, `/yt`, `/ya`, `/2gis`, `/site`, `/bot`, `/banner`, `/ok` — ведут на запись с нужной меткой. Кампания через слеш: `gubenko-group.site/ig/oktyabr`. Список — `short_links` в `funnel.json`, в кабинете — вкладка «Воронка» → «Короткие ссылки».
 
 ## Установка на сервер (Ubuntu 24.04 / 26.04)
 В консоли сервера под root одной командой:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SK-strategy/zapis-konsultacii/main/deploy/setup.sh | bash -s -- губенко.онлайн
+curl -fsSL https://raw.githubusercontent.com/SK-strategy/zapis-konsultacii/main/deploy/setup.sh | bash -s -- gubenko-group.site
 ```
 Скрипт спросит пароли трёх кабинетов (логины `admin`, `natalya`, `roman`), поставит сайт, HTTPS, автообновление из GitHub каждые 5 минут и ежедневную копию базы (хранится 30 дней). Без домена — `... | bash` (сайт по IP).
 
