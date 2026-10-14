@@ -24,7 +24,14 @@
 .ctrl .lbl{min-width:140px;text-align:center;font-weight:500}
 .sh{font:600 17px/1.3 var(--f-display);margin:8px 0 0}
 .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted)}
-.legend .lg{display:inline-flex;align-items:center;gap:6px}.sitetoggle{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:999px;padding:2px 9px;cursor:pointer}.sitetoggle.on{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.legend .lg{display:inline-flex;align-items:center;gap:8px}
+.sitetoggle{display:inline-flex;align-items:center;gap:10px;font:inherit;font-size:14px;font-weight:600;border:1.5px solid var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:7px 14px 7px 8px;cursor:pointer;line-height:1.2}
+.sitetoggle .sw{position:relative;width:38px;height:22px;border-radius:999px;background:var(--blk);flex:0 0 auto;transition:background .15s}
+.sitetoggle .sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.sitetoggle.on{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.sitetoggle.on .sw{background:var(--ok)}.sitetoggle.on .sw::after{transform:translateX(16px)}
+.sitetoggle:disabled{opacity:.6}
+.legend:has(.sitetoggle){gap:14px 22px;font-size:15px;font-weight:600;color:var(--fg)}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 table.week{border-collapse:collapse;width:100%;min-width:900px;table-layout:fixed}
@@ -192,8 +199,8 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
     $('schedTitle').textContent=view==='all'?'Расписание всех специалистов':(+view===ME.id?'Моё расписание':'Расписание: '+uname(+view));
     $('legend').replaceChildren(...USERS.filter(u=>viewManagers().includes(u.id)).map(u=>el('span',{class:'lg'},[el('i',{class:'dot',style:'background:'+COLOR[u.id]}),
       u.role==='admin'?u.name+' (не видно клиентам)':u.name,
-      isAdmin()&&u.role==='manager'?el('button',{type:'button',class:'sitetoggle'+(u.public?' on':''),title:u.public?'Убрать из записи с сайта (отпуск, больничный)':'Вернуть в запись с сайта',
-        text:u.public?'запись с сайта: вкл':'запись с сайта: выкл',onclick:async e=>{e.target.disabled=true;try{const j=await api('/api/admin/users/'+u.id,{method:'PATCH',body:{public:!u.public}});USERS=ME.users=j.users;renderWeek();}catch(err){e.target.textContent=err.message;}finally{e.target.disabled=false;}}}):(!isAdmin()&&!u.public&&u.role==='manager'?' (запись с сайта выключена)':null)])));
+      isAdmin()&&u.role==='manager'?el('button',{type:'button',class:'sitetoggle'+(u.public?' on':''),role:'switch','aria-checked':String(!!u.public),title:u.public?'Нажмите, чтобы убрать менеджера из записи с сайта (отпуск, больничный)':'Нажмите, чтобы вернуть менеджера в запись с сайта',
+        onclick:async e=>{const btn=e.currentTarget;btn.disabled=true;try{const j=await api('/api/admin/users/'+u.id,{method:'PATCH',body:{public:!u.public}});USERS=ME.users=j.users;renderWeek();}catch(err){btn.lastChild.textContent=err.message;btn.disabled=false;}}},[el('span',{class:'sw','aria-hidden':'true'}),el('span',{text:u.public?'Принимает записи с сайта':'Отпуск — записи с сайта не приходят'})]):(!isAdmin()&&!u.public&&u.role==='manager'?el('span',{class:'sitetoggle',style:'cursor:default',text:'Отпуск — записи с сайта не приходят'}):null)])));
     const by={},bl={};data.bookings.forEach(x=>(by[x.slot]=by[x.slot]||[]).push(x));data.blocked.forEach(x=>(bl[x.slot]=bl[x.slot]||[]).push(x));
     const head=el('thead',{},[el('tr',{},[el('th',{class:'hr',text:'Время'}),...days.map(s=>el('th',{class:s===tk?'today':''},[dayLabel(s)+(s===tk?' · сегодня':''),el('small',{class:'tnum',text:`записей: ${data.bookings.filter(x=>x.date===s).length}`})]))]),
       el('tr',{},[el('th',{class:'hr'},el('small',{text:'Заметки'})),...days.map(s=>el('td',{},el('button',{type:'button',class:'note-cell'+(data.notes[s]?'':' empty'),text:data.notes[s]||'+ заметка дня',onclick:()=>openNote(s)})))])]);
