@@ -1,15 +1,15 @@
 /* Общие стили: страница записи, вход, админка. Цвета — токены, светлая и тёмная тема. */
 :root{
-  --bg:#f6f4f1; --surface:#ffffff; --sunk:#efebe6; --line:#e1dbd3;
-  --fg:#22201d; --muted:#6f6860; --accent:#7a2e4f; --accent-fg:#ffffff; --accent-soft:#f3e4ea;
+  --bg:#f5f2ec; --surface:#ffffff; --sunk:#ece7de; --line:#ddd5c8; --gold:#b28f67; --brand:#123b33;
+  --fg:#1c2622; --muted:#66706b; --accent:#123b33; --accent-fg:#f3e8d6; --accent-soft:#e0ebe6;
   --ok:#2f7a4f; --ok-soft:#e2f1e7; --warn:#a2581a; --warn-soft:#f8eadb; --bad:#a4322b; --bad-soft:#f7e1df; --blk:#8a8178;
   --f-display:"Unbounded","Onest",system-ui,sans-serif;
   --f-body:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
   --r:10px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#181614; --surface:#211f1c; --sunk:#2a2724; --line:#37332e;
-  --fg:#efeae4; --muted:#a59d93; --accent:#e18cb0; --accent-fg:#1d1416; --accent-soft:#3a2530;
+  --bg:#0d1d19; --surface:#132823; --sunk:#1a322c; --line:#284239; --gold:#c9a77e; --brand:#123b33;
+  --fg:#eee8dd; --muted:#a5b0aa; --accent:#c9a77e; --accent-fg:#102b25; --accent-soft:#2c3a2f;
   --ok:#7cc89a; --ok-soft:#1f3328; --warn:#e3a36a; --warn-soft:#3a2b1d; --bad:#ec8f86; --bad-soft:#3d2321; --blk:#8f877e; color-scheme:dark}}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}

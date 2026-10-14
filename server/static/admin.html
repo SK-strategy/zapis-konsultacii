@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/static/favicon.png"><link rel="apple-touch-icon" href="/static/apple-touch-icon.png"><meta name="theme-color" content="#123b33">
 <title>Кабинет — Губенко Групп</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600&display=swap">
@@ -8,7 +9,7 @@
 <style>
 .top{max-width:1280px;margin:0 auto;padding-block:12px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
 .brandbar{display:flex;gap:10px;align-items:center}
-.logo{width:36px;height:36px;border-radius:10px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font:600 13px/1 var(--f-display);overflow:hidden}
+.logo{width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font:600 13px/1 var(--f-display);overflow:hidden}
 .logo img{width:100%;height:100%;object-fit:cover}
 .brandbar b{display:block;font:600 15px/1.2 var(--f-display)}.brandbar small{display:block;color:var(--muted);font-size:12px}
 .seg{display:inline-flex;flex-wrap:wrap;background:var(--sunk);border-radius:999px;padding:3px}
@@ -132,7 +133,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
   const el=(t,a={},k=[])=>{const n=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')n.className=v;else if(x==='text')n.textContent=v;else if(x.startsWith('on'))n.addEventListener(x.slice(2),v);else if(v===true)n.setAttribute(x,'');else if(v!==false&&v!=null)n.setAttribute(x,v);}for(const c of[].concat(k))if(c!=null)n.append(c);return n;};
   const pad=n=>String(n).padStart(2,'0');
   const WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],MON=['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
-  const MSK=3*3600e3,COLORS=['#2f6fb0','#2f7a4f','#a2581a','#7a2e4f','#6a4fb0','#0f7f84'];
+  const MSK=3*3600e3,COLORS=['#2f6fb0','#b07a3a','#6a4fb0','#2f7a4f','#a4322b','#0f7f84'];
   let ME=null,USERS=[],COLOR={},view='all';
 
   async function api(path,opt={}){
