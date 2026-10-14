@@ -123,6 +123,9 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
   <div class="fun" id="fun"></div>
   <h2 style="font:600 17px/1.3 var(--f-display);margin:8px 0 0">Источники записей</h2>
   <div class="gridwrap" style="max-width:640px"><table class="list" id="src" style="min-width:0"></table></div>
+  <h2 style="font:600 17px/1.3 var(--f-display);margin:8px 0 0">Короткие ссылки</h2>
+  <p class="sub" style="margin:0;max-width:640px">Ставьте в посты, рекламу и описания — источник запишется сам. Чтобы различать посты, допишите кампанию: <span class="mt">…/ig/oktyabr</span></p>
+  <div class="gridwrap" style="max-width:640px"><table class="list" id="links" style="min-width:0"></table></div>
 </main>
 
 <div class="panel" id="panel" hidden><aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="p-title"></aside></div>
@@ -312,6 +315,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
   // ---------- воронка ----------
   async function loadFunnel(){
     const fs=$('fsrc'),cur=fs.value;
+    drawLinks();
     const s=await api('/api/admin/stats?days='+$('fdays').value+(cur?'&src='+encodeURIComponent(cur):'')),e=s.events;
     fs.replaceChildren(el('option',{value:'',text:'Все источники'}),...Array.from(new Set(s.srcs.concat(cur?[cur]:[]))).map(v=>el('option',{value:v,text:v,selected:v===cur})));
     const steps=[['Перешли на сайт',e.open],['Начали анкету',e.start],['Ответили на 1-й вопрос',e.q_debt],['Ответили на 2-й',e.q_property],['Ответили на 3-й',e.q_work],
@@ -321,6 +325,12 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
     $('kpis').replaceChildren(...[['Пришли',s.outcome.came],['Не пришли',s.outcome.noshow],['Купили',s.outcome.bought]].map(([t,v])=>el('div',{class:'kpi'},[el('b',{class:'tnum',text:String(v)}),el('span',{text:t})])));
     $('src').replaceChildren(el('thead',{},el('tr',{},[el('th',{text:'Источник'}),el('th',{text:'Записей и заявок'})])),
       el('tbody',{},s.by_source.length?s.by_source.map(r=>el('tr',{},[el('td',{text:r.name||'не указан'}),el('td',{class:'tnum',text:String(r.n)})])):el('tr',{},el('td',{colspan:2,class:'empty',text:'Пока пусто.'}))));
+  }
+  function drawLinks(){
+    const base=(ME.public_url||location.origin).replace(/\/$/,'');
+    $('links').replaceChildren(el('thead',{},el('tr',{},[el('th',{text:'Ссылка'}),el('th',{text:'Источник'}),el('th',{})])),
+      el('tbody',{},ME.short_links.map(l=>{const u=base+'/'+l.code;const b=el('button',{class:'btn ghost small',type:'button',text:'копировать',onclick:async()=>{try{await navigator.clipboard.writeText(u);b.textContent='скопировано';setTimeout(()=>b.textContent='копировать',1500);}catch(e){}}});
+        return el('tr',{},[el('td',{class:'tnum',text:u.replace(/^https?:\/\//,'')}),el('td',{text:l.source}),el('td',{},b)]);})));
   }
   $('fdays').onchange=loadFunnel;$('fsrc').onchange=loadFunnel;
 

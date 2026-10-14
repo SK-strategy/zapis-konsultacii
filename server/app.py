@@ -336,6 +336,19 @@ def page_privacy(): return send_from_directory(STATIC, "privacy.html")
 @app.get("/static/<path:name>")
 def static_files(name): return send_from_directory(STATIC, name)
 
+SHORT_LINKS = {k.lower(): v for k, v in FUNNEL.get("short_links", {}).items() if not k.startswith("_")}
+
+@app.get("/<code>")
+@app.get("/<code>/<campaign>")
+def short_link(code, campaign=""):
+    """Короткая ссылка на своём домене: /ig → /?utm_source=instagram, /ig/oktyabr → + utm_campaign=oktyabr."""
+    src = SHORT_LINKS.get(code.lower())
+    if not src: abort(404)
+    q = "utm_source=" + quote(src) + "&utm_medium=short"
+    camp = re.sub(r"[^\w-]", "", campaign)[:60]
+    if camp: q += "&utm_campaign=" + quote(camp)
+    return redirect("/?" + q, 302)
+
 @app.get("/api/funnel")
 def api_funnel():
     return jsonify(FUNNEL)
@@ -565,7 +578,8 @@ def api_me():
     u = me()
     return jsonify(id=u["id"], name=u["name"], role=u["role"], users=users_list(), hours=HOURS, workdays=WORKDAYS,
                    sources=SOURCES, services=SERVICES, confirm=CONFIRM, attend=ATTEND, client_statuses=CLIENT_STATUSES,
-                   messengers=[{"id": m["id"], "label": m["label"]} for m in FUNNEL["messengers"]], brand=FUNNEL["brand"], logo=FUNNEL.get("logo", ""))
+                   messengers=[{"id": m["id"], "label": m["label"]} for m in FUNNEL["messengers"]], brand=FUNNEL["brand"], logo=FUNNEL.get("logo", ""),
+                   public_url=FUNNEL.get("public_url", ""), short_links=[{"code": k, "source": resolve_source(v)} for k, v in SHORT_LINKS.items()])
 
 def can_touch(manager_id):
     """Админ работает с любым расписанием, менеджер — только со своим."""

@@ -210,5 +210,20 @@
     "lbg": "LBG",
     "status": "Статус",
     "networking": "Нетворкинг"
+  },
+  "public_url": "https://губенко.онлайн",
+  "short_links": {
+    "_": "Короткие ссылки: губенко.онлайн/КОД → запись с utm_source. Можно добавить кампанию: губенко.онлайн/ig/oktyabr",
+    "ig": "instagram",
+    "tg": "telegram",
+    "max": "max",
+    "vk": "vk",
+    "yt": "youtube",
+    "ya": "yandex",
+    "2gis": "2gis",
+    "site": "site",
+    "bot": "bot",
+    "banner": "banner",
+    "ok": "ok"
   }
 }
