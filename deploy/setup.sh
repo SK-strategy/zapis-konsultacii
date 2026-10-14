@@ -53,15 +53,14 @@ ask_pw() {  # пароль вводится скрыто и нигде не со
     [ ${#PW} -ge 8 ] && break; echo "  слишком короткий, ещё раз"
   done
 }
-if [ -z "$(manage list-users 2>/dev/null)" ]; then
-  echo "Создаю кабинеты. Логины: admin, natalya, roman."
-  ask_pw "Кабинет админа" admin;     manage ensure-user admin "Админ" admin
-  ask_pw "Менеджер Наталья" natalya; manage ensure-user natalya "Наталья" manager
-  ask_pw "Менеджер Роман" roman;     manage ensure-user roman "Роман" manager
-  PW=""
-else
-  echo "Кабинеты уже есть:"; manage list-users
-fi
+USERS_NOW="$(manage list-users 2>/dev/null || true)"
+has_user() { printf '%s\n' "$USERS_NOW" | grep -q "^$1 "; }
+echo "Логины кабинетов: admin, natalya, roman."
+for spec in "admin|Админ|admin|Кабинет админа" "natalya|Наталья|manager|Менеджер Наталья" "roman|Роман|manager|Менеджер Роман"; do
+  IFS='|' read -r L N R T <<< "$spec"
+  if has_user "$L"; then echo "  $L — уже есть"; continue; fi
+  ask_pw "$T" "$L"; manage ensure-user "$L" "$N" "$R"; PW=""
+done
 
 say "4/7 Служба приложения"
 cat > /etc/systemd/system/zapis.service <<EOF
