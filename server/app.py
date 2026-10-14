@@ -841,13 +841,31 @@ def stats():
     ev = {e: c.execute("SELECT COUNT(*) FROM events WHERE event=? AND day>=?" + (" AND src=?" if src else ""),
                        (e, since) + ((src,) if src else ())).fetchone()[0] for e in FUNNEL_EVENTS}
     srcs = [r[0] for r in c.execute("SELECT src FROM events WHERE day>=? AND src!='' GROUP BY src ORDER BY COUNT(*) DESC", (since,))]
-    q = lambda sql, *a: c.execute(sql, (since,) + a).fetchone()[0]
-    outcome = {"came": q("SELECT COUNT(*) FROM bookings WHERE attend IN ('came','nc') AND date>=?"),
-               "noshow": q("SELECT COUNT(*) FROM bookings WHERE attend='noshow' AND date>=?"),
-               "bought": q("SELECT COUNT(DISTINCT client_id) FROM bookings WHERE date>=? AND client_id IN (SELECT id FROM clients WHERE status='bought')")}
-    by_source = [dict(r) for r in c.execute("SELECT lead_source AS name, COUNT(*) AS n FROM bookings WHERE status!='cancelled' AND substr(created_at,1,10)>=? "
-                                            "GROUP BY lead_source ORDER BY n DESC", (since,))]
-    return jsonify(days=days, src=src, srcs=srcs, events=ev, outcome=outcome, by_source=by_source)
+    today = today_msk().isoformat()
+    # менеджер видит свои результаты; админ — общие или по выбранному менеджеру
+    mid = me()["id"] if not is_admin() else (int(request.args["manager"]) if (request.args.get("manager") or "").isdigit() else None)
+    mf, ma = (" AND manager_id=?", (mid,)) if mid else ("", ())
+
+    def results(extra="", args=()):
+        r = c.execute("SELECT COUNT(*) AS booked,"
+                      " SUM(attend='came') AS came, SUM(attend='noshow') AS noshow, SUM(attend='nc') AS nc,"
+                      " SUM(date<? AND attend='') AS unmarked,"
+                      " COUNT(DISTINCT CASE WHEN client_id IN (SELECT id FROM clients WHERE status='bought') THEN client_id END) AS bought"
+                      " FROM bookings WHERE kind='slot' AND status!='cancelled' AND date>=?" + extra,
+                      (today, since) + args).fetchone()
+        return {k: r[k] or 0 for k in r.keys()}
+    outcome = results(mf, ma)
+    outcome["came"] += outcome["nc"]  # «пришли» = все, кто был на встрече
+    by_source = [dict(r) for r in c.execute("SELECT lead_source AS name, COUNT(*) AS n FROM bookings WHERE status!='cancelled' AND substr(created_at,1,10)>=?" + mf +
+                                            " GROUP BY lead_source ORDER BY n DESC", (since,) + ma)]
+    per_manager = []
+    if is_admin():
+        for u in c.execute("SELECT id, name FROM users WHERE active=1 ORDER BY role='admin', id").fetchall():
+            row = results(" AND manager_id=?", (u["id"],))
+            if row["booked"] or u["id"] != me()["id"]:
+                per_manager.append({"id": u["id"], "name": u["name"], **row})
+    return jsonify(days=days, src=src, srcs=srcs, events=ev, outcome=outcome, by_source=by_source,
+                   manager=mid, per_manager=per_manager)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8000")), debug=False)

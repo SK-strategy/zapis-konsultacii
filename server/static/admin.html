@@ -22,6 +22,7 @@
 .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ctrl button,.ctrl select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
 .ctrl .lbl{min-width:140px;text-align:center;font-weight:500}
+.sh{font:600 17px/1.3 var(--f-display);margin:8px 0 0}
 .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted)}
 .legend .lg{display:inline-flex;align-items:center;gap:6px}.sitetoggle{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:999px;padding:2px 9px;cursor:pointer}.sitetoggle.on{background:var(--ok-soft);color:var(--ok);border-color:transparent}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
@@ -91,7 +92,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
     <button id="t-sched" aria-pressed="true">Расписание</button>
     <button id="t-req" aria-pressed="false">Заявки<span class="badge" id="reqn" hidden></span></button>
     <button id="t-crm" aria-pressed="false">Клиенты</button>
-    <button id="t-fun" aria-pressed="false">Воронка</button>
+    <button id="t-fun" aria-pressed="false">Статистика</button>
   </div>
   <button class="btn ghost small" id="logout">Выйти</button>
 </header>
@@ -118,11 +119,14 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
 </main>
 
 <main class="wrap" id="v-fun" hidden>
-  <div class="ahead"><div><h1>Воронка</h1><p class="sub">Сколько людей дошли до каждого шага. Каждый человек считается один раз.</p></div>
-    <div class="ctrl"><select id="fsrc" aria-label="Источник"><option value="">Все источники</option></select><select id="fdays" aria-label="Период"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option></select></div></div>
+  <div class="ahead"><div><h1>Статистика</h1><p class="sub" id="fsub">Результаты встреч, воронка записи на сайте и источники клиентов.</p></div>
+    <div class="ctrl"><select id="fman" aria-label="Менеджер" hidden></select><select id="fsrc" aria-label="Источник"><option value="">Все источники</option></select><select id="fdays" aria-label="Период"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option></select></div></div>
+  <h2 class="sh" id="kpiTitle">Результаты встреч</h2>
   <div class="cards" id="kpis"></div>
+  <div id="permgr" hidden><h2 class="sh">По менеджерам</h2><div class="gridwrap" style="max-width:860px"><table class="list" id="mgrt" style="min-width:0"></table></div></div>
+  <h2 class="sh">Воронка записи на сайте <span class="mt" style="font-weight:400;font-size:13px">— общая для всех: до записи менеджер ещё не назначен</span></h2>
   <div class="fun" id="fun"></div>
-  <h2 style="font:600 17px/1.3 var(--f-display);margin:8px 0 0">Источники записей</h2>
+  <h2 class="sh" id="srcTitle">Источники записей</h2>
   <div class="gridwrap" style="max-width:640px"><table class="list" id="src" style="min-width:0"></table></div>
   <h2 style="font:600 17px/1.3 var(--f-display);margin:8px 0 0">Короткие ссылки</h2>
   <p class="sub" style="margin:0;max-width:640px">Ставьте в посты, рекламу и описания — источник запишется сам. Чтобы различать посты, допишите кампанию: <span class="mt">…/ig/oktyabr</span></p>
@@ -320,13 +324,20 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
   async function loadFunnel(){
     const fs=$('fsrc'),cur=fs.value;
     drawLinks();
-    const s=await api('/api/admin/stats?days='+$('fdays').value+(cur?'&src='+encodeURIComponent(cur):'')),e=s.events;
+    const fm=$('fman');if(isAdmin()&&!fm.options.length){fm.hidden=false;fm.append(el('option',{value:'',text:'Все менеджеры'}),...USERS.map(u=>el('option',{value:u.id,text:u.name})));}
+    const s=await api('/api/admin/stats?days='+$('fdays').value+(cur?'&src='+encodeURIComponent(cur):'')+(fm.value?'&manager='+fm.value:'')),e=s.events;
     fs.replaceChildren(el('option',{value:'',text:'Все источники'}),...Array.from(new Set(s.srcs.concat(cur?[cur]:[]))).map(v=>el('option',{value:v,text:v,selected:v===cur})));
     const steps=[['Перешли на сайт',e.open],['Начали анкету',e.start],['Ответили на 1-й вопрос',e.q_debt],['Ответили на 2-й',e.q_property],['Ответили на 3-й',e.q_work],
       ['Увидели предложение',e.offer],['Выбрали «дату и время»',e.branch_slot],['Выбрали «с менеджером»',e.branch_request],['Выбрали слот',e.slot_pick],['Записались',e.booked],['Оставили заявку',e.requested]];
     const max=Math.max(1,e.open);
     $('fun').replaceChildren(...steps.map(([t,v])=>el('div',{class:'bar'},[el('span',{text:t}),el('span',{class:'track'},el('i',{style:`width:${Math.round(v*100/max)}%`})),el('b',{class:'tnum',text:`${v} · ${Math.round(v*100/max)}%`})])));
-    $('kpis').replaceChildren(...[['Пришли',s.outcome.came],['Не пришли',s.outcome.noshow],['Купили',s.outcome.bought]].map(([t,v])=>el('div',{class:'kpi'},[el('b',{class:'tnum',text:String(v)}),el('span',{text:t})])));
+    const o=s.outcome,pct=(a,b)=>b?Math.round(a*100/b)+'%':'—';
+    $('kpiTitle').textContent=isAdmin()?(s.manager?'Результаты: '+uname(s.manager):'Результаты встреч — все менеджеры'):'Мои результаты';
+    $('kpis').replaceChildren(...[['Записей',o.booked],['Пришли',o.came],['Не пришли',o.noshow],['Нецелевые',o.nc],['Купили',o.bought],['Доходимость',pct(o.came,o.came+o.noshow)],['Не отмечено',o.unmarked]].map(([t,v])=>el('div',{class:'kpi'},[el('b',{class:'tnum',text:String(v)}),el('span',{text:t})])));
+    $('srcTitle').textContent=isAdmin()&&!s.manager?'Источники записей':(isAdmin()?'Источники записей: '+uname(s.manager):'Источники моих клиентов');
+    $('permgr').hidden=!isAdmin()||!s.per_manager.length;
+    if(isAdmin())$('mgrt').replaceChildren(el('thead',{},el('tr',{},['Менеджер','Записей','Пришли','Не пришли','Нецелевые','Купили','Доходимость','Не отмечено'].map(x=>el('th',{text:x})))),
+      el('tbody',{},s.per_manager.map(m=>el('tr',{},[el('td',{},[el('i',{class:'dot',style:'background:'+COLOR[m.id]}),m.name]),...[m.booked,m.came+m.nc,m.noshow,m.nc,m.bought,pct(m.came+m.nc,m.came+m.nc+m.noshow),m.unmarked].map(v=>el('td',{class:'tnum',text:String(v)}))]))));
     $('src').replaceChildren(el('thead',{},el('tr',{},[el('th',{text:'Источник'}),el('th',{text:'Записей и заявок'})])),
       el('tbody',{},s.by_source.length?s.by_source.map(r=>el('tr',{},[el('td',{text:r.name||'не указан'}),el('td',{class:'tnum',text:String(r.n)})])):el('tr',{},el('td',{colspan:2,class:'empty',text:'Пока пусто.'}))));
   }
@@ -336,7 +347,7 @@ hr.sep{border:0;border-top:1px solid var(--line);width:100%;margin:2px 0}
       el('tbody',{},ME.short_links.map(l=>{const u=base+'/'+l.code;const b=el('button',{class:'btn ghost small',type:'button',text:'копировать',onclick:async()=>{try{await navigator.clipboard.writeText(u);b.textContent='скопировано';setTimeout(()=>b.textContent='копировать',1500);}catch(e){}}});
         return el('tr',{},[el('td',{class:'tnum',text:u.replace(/^https?:\/\//,'')}),el('td',{text:l.source}),el('td',{},b)]);})));
   }
-  $('fdays').onchange=loadFunnel;$('fsrc').onchange=loadFunnel;
+  $('fdays').onchange=loadFunnel;$('fsrc').onchange=loadFunnel;$('fman').onchange=loadFunnel;
 
   // ---------- вкладки ----------
   const TABS={sched:['t-sched','v-sched',()=>loadWeek()],req:['t-req','v-req',()=>loadReq()],crm:['t-crm','v-crm',()=>loadClients()],fun:['t-fun','v-fun',()=>loadFunnel()]};
