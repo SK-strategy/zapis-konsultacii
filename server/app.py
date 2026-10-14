@@ -630,6 +630,18 @@ def opt(v, allowed):
     v = (v or "").strip()
     return v if v in allowed else ""
 
+@app.patch("/api/admin/users/<int:uid>")
+@login_required(api=True)
+def admin_user_update(uid):
+    """Админ включает/выключает менеджеру приём записей с сайта (отпуск, больничный)."""
+    if not is_admin(): return jsonify(error="Доступно только админу."), 403
+    b = body()
+    if not isinstance(b.get("public"), bool): return jsonify(error="Нет значения."), 400
+    n = db().execute("UPDATE users SET public=? WHERE id=? AND role='manager' AND active=1", (1 if b["public"] else 0, uid)).rowcount
+    db().commit()
+    if not n: return jsonify(error="Менеджер не найден."), 404
+    return jsonify(ok=True, users=users_list())
+
 @app.post("/api/admin/bookings")
 @login_required(api=True)
 def admin_create():
