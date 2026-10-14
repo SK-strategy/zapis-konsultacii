@@ -126,13 +126,15 @@
       "contact": "telegram",
       "contact_label": "Ник в Telegram, если номер скрыт",
       "placeholder": "@username",
-      "manager": "@gubenko_group"
+      "manager": "@gubenko_group",
+      "manager_url": "https://t.me/gubenko_group"
     },
     {
       "id": "whatsapp",
       "label": "WhatsApp",
       "contact": "phone",
-      "manager": "+7 923 111-36-23"
+      "manager": "+7 923 111-36-23",
+      "manager_url": "https://wa.me/79231113623"
     },
     {
       "id": "max",

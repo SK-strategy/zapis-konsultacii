@@ -198,7 +198,7 @@
     const chips=el('div',{class:'chipset',role:'radiogroup','aria-label':'Мессенджер'});
     const accNote=el('p',{class:'note',style:'margin:0'});
     const drawChips=()=>{chips.replaceChildren(...F.messengers.map(m=>el('button',{type:'button',role:'radio','aria-checked':String(m.id===msg),text:m.label,onclick:()=>{msg=m.id;drawChips();}})));
-      const m=F.messengers.find(x=>x.id===msg);contactWrap.hidden=!(m&&m.contact==='telegram');accNote.textContent='Вам напишет менеджер «'+F.brand+'» с аккаунта '+acct(msg)+'.';
+      const m=F.messengers.find(x=>x.id===msg);contactWrap.hidden=!(m&&m.contact==='telegram');accNote.replaceChildren(...linked('span',{},'Вам напишет менеджер «'+F.brand+'» с аккаунта '+acct(msg)+'.',msg).childNodes);
       if(m&&m.contact==='telegram'){contactWrap.firstChild.textContent=m.contact_label;contact.placeholder=m.placeholder||'';}};
     drawChips();
     const consent=el('input',{type:'checkbox',id:'f-consent'}),web=el('input',{id:'f-web',tabindex:'-1',autocomplete:'off'});
@@ -257,6 +257,14 @@
     try{bookingPage(await api('/api/booking/'+encodeURIComponent(token)));}
     catch(e){S.token='';save();show(el('div',{class:'card'},[el('p',{text:'Запись не найдена. Можно пройти анкету заново.'})]),el('button',{class:'btn big',type:'button',text:F.greeting.button,onclick:greeting}));}
   }
+  // контакт менеджера в тексте → кликабельная ссылка (t.me, wa.me); x — выбранный мессенджер или пусто
+  function linked(tag,attrs,text,x){
+    const m=F.messengers.find(m=>m.id===x||m.label===x);
+    const pairs=(m?[m]:F.messengers).filter(v=>v.manager&&v.manager_url).map(v=>[v.manager,v.manager_url]).filter((v,i,a)=>a.findIndex(w=>w[0]===v[0])===i);
+    let nodes=[text];
+    for(const[label,url]of pairs)nodes=nodes.flatMap(n=>typeof n!=='string'?[n]:n.split(label).flatMap((part,i)=>i?[el('a',{href:url,target:'_blank',rel:'noopener',text:label}),part]:[part]));
+    return el(tag,attrs,nodes.filter(n=>n!==''));
+  }
   function acct(x){const m=F.messengers.find(m=>m.id===x||m.label===x);return (m&&m.manager)||F.manager_account;}
   function bookingPage(j,fresh){
     moving=false;
@@ -270,14 +278,14 @@
       actions=[el('button',{class:'btn big',type:'button',text:F.offer.button_slot,onclick:()=>{S.token='';S.stage='offer';save();slots();}})];
     }else if(j.status==='pending'){
       head=[el('span',{class:'status',text:'Ожидает согласования времени'}),el('h2',{text:F.request.done_title}),
-        el('p',{text:fill(F.request.done_text,{messenger:j.messenger,contact:j.contact,account})}),el('p',{class:'hint',text:F.request.wait}),el('p',{class:'hint',text:F.request.after})];
+        linked('p',{},fill(F.request.done_text,{messenger:j.messenger,contact:j.contact,account}),j.messenger),el('p',{class:'hint',text:F.request.wait}),el('p',{class:'hint',text:F.request.after})];
     }else{
       head=[el('span',{class:'status ok',text:'Запись подтверждена'}),el('h2',{text:fresh?F.booked.title:'Ваша консультация'})];
       body=[el('dl',{class:'kv'},[el('dt',{text:'Дата'}),el('dd',{text:dayL(j.start)}),el('dt',{text:'Время'}),el('dd',{class:'tnum',text:timeL(j.start)+' · '+tzLabel(TZ)}),
           el('dt',{text:'Формат'}),el('dd',{text:F.meeting_format+', '+j.duration}),
           j.manager?el('dt',{text:'Специалист'}):null,j.manager?el('dd',{text:j.manager}):null,
           el('dt',{text:'Ссылка'}),el('dd',{},j.meeting_link?el('a',{href:j.meeting_link,target:'_blank',rel:'noopener',text:'Подключиться к встрече'}):'менеджер пришлёт перед встречей')]),
-        el('p',{text:sendTo})];
+        linked('p',{},sendTo,j.messenger)];
       actions=[el('div',{class:'row'},[el('a',{class:'btn',href:j.ics,text:'Добавить в календарь'}),el('a',{class:'btn ghost',href:j.gcal,target:'_blank',rel:'noopener',text:'Google Календарь'})]),
         ig?el('p',{class:'note',html:'В Instagram календарь может не открыться. Нажмите <b>⋯</b> → «Открыть в браузере» — запись откроется там же.'}):null];
     }
