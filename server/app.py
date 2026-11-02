@@ -8,14 +8,16 @@
 
 Хранилище — SQLite в папке DATA_DIR. Настройки — переменные окружения (см. README.md).
 """
-import os, re, json, random, sqlite3, secrets, time, datetime as dt
+import os, re, sys, json, random, sqlite3, secrets, time, datetime as dt
 from functools import wraps
 from urllib.parse import quote
 from flask import Flask, g, request, jsonify, session, redirect, send_from_directory, Response, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # ---------- настройки ----------
+DEMO = os.environ.get("ZAPIS_DEMO") == "1"      # демо полной версии: отдельный экземпляр с вымышленными данными (/full)
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(os.path.dirname(__file__), "data"))
+if DEMO: DATA_DIR = os.path.join(DATA_DIR, "demo")
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "zapis.sqlite3")
 HOURS = [int(h) for h in os.environ.get("HOURS", "6,7,8,9,10,11,12").split(",")]   # начало консультаций, МСК
@@ -26,6 +28,13 @@ SLOT_MINUTES = int(os.environ.get("SLOT_MINUTES", "60"))
 MSK = dt.timezone(dt.timedelta(hours=3), "MSK")
 with open(os.path.join(os.path.dirname(__file__), "funnel.json"), encoding="utf-8") as _f:
     FUNNEL = json.load(_f)
+DEMO_HASH = os.environ.get("DEMO_PASSWORD_HASH") or FUNNEL.get("demo_password_hash", "")
+if DEMO:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import demo_seed
+# edition: "lite" — базовая версия (запись + простой список), "full" — всё (анкета, кабинеты, аналитика)
+EDITION = "full" if DEMO else (os.environ.get("EDITION") or FUNNEL.get("edition", "full"))
+LITE = EDITION == "lite"
 EVENT_TITLE = os.environ.get("EVENT_TITLE", "Консультация «%s»" % FUNNEL["brand"])
 QUESTIONS = {q["id"]: q for q in FUNNEL["questions"]}
 MESSENGERS = {m["id"]: m for m in FUNNEL["messengers"]}
@@ -62,7 +71,7 @@ app = Flask(__name__, static_folder=None)
 app.json.sort_keys = False  # порядок вариантов (подтверждение, явка, статусы) как в коде
 
 def _secret():
-    env = os.environ.get("SECRET_KEY")
+    env = None if DEMO else os.environ.get("SECRET_KEY")   # у демо свой ключ
     if env:
         return env
     p = os.path.join(DATA_DIR, ".secret_key")
@@ -80,6 +89,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "1") == "1",
     PERMANENT_SESSION_LIFETIME=dt.timedelta(days=14),
 )
+if DEMO: app.config.update(SESSION_COOKIE_NAME="zdemo", SESSION_COOKIE_PATH="/full")
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
 # ---------- база ----------
@@ -149,7 +159,7 @@ def init_db():
     for t, col in (("bookings", "utm"), ("events", "src")):  # добавлено после запуска v2
         if col not in {r[1] for r in c.execute(f"PRAGMA table_info({t})")}:
             c.execute(f"ALTER TABLE {t} ADD COLUMN {col} TEXT DEFAULT ''")
-    for login, pw, name, role in parse_users(os.environ.get("ADMIN_USERS", "")):
+    for login, pw, name, role in ([] if DEMO else parse_users(os.environ.get("ADMIN_USERS", ""))):
         if not c.execute("SELECT 1 FROM users WHERE login=?", (login,)).fetchone():
             c.execute("INSERT INTO users(login,name,pw_hash,role,public) VALUES(?,?,?,?,?)",
                       (login, name, generate_password_hash(pw), role, 1 if role == "manager" else 0))
@@ -182,6 +192,9 @@ def slot_problem(date, hour, for_client=True):
     return None
 
 def public_managers(c):
+    if LITE:  # базовая версия: одно расписание — владелец (первый админ)
+        r = c.execute("SELECT id FROM users WHERE role='admin' AND active=1 ORDER BY id LIMIT 1").fetchone()
+        return [r["id"]] if r else []
     return [r["id"] for r in c.execute("SELECT id FROM users WHERE role='manager' AND public=1 AND active=1 ORDER BY id")]
 
 def manager_busy(c, slot, manager_id, exclude_booking=None):
@@ -290,6 +303,10 @@ def same_origin():
     origin = request.headers.get("Origin")
     return not origin or origin.split("://", 1)[-1] == request.host
 
+def P(path):
+    """Путь с учётом того, что демо живёт под /full."""
+    return request.script_root + path
+
 def me():
     """Текущий пользователь кабинета (или None)."""
     uid = session.get("uid")
@@ -306,7 +323,7 @@ def login_required(api=False):
         def wrapper(*a, **kw):
             if not me():
                 session.clear()
-                return (jsonify(error="Войдите в кабинет заново."), 401) if api else redirect("/admin/login")
+                return (jsonify(error="Войдите в кабинет заново."), 401) if api else redirect(P("/demo/as/admin" if DEMO else "/admin/login"))
             if api and request.method != "GET" and (request.headers.get("X-Requested-With") != "fetch" or not same_origin()):
                 return jsonify(error="Запрос отклонён."), 403
             return fn(*a, **kw)
@@ -327,16 +344,77 @@ def body():
     return request.get_json(silent=True) or {}
 
 # ---------- публичная часть ----------
+# ---------- демо (/full) и базовая версия ----------
+_ABS = re.compile(r"""(['"`])/(api|admin|static|privacy|ics|gate|demo)(?=[/'"`?])|(['"`])/(?=\?)""")
+DEMO_BAR = (
+    '<style>#demobar{position:sticky;top:0;z-index:9999;background:#123B33;color:#fff;font:500 13px/1.3 Onest,system-ui,sans-serif;padding:8px 12px;'
+    'display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:center}#demobar a{color:#fff}@media(max-width:600px){#demobar{font-size:12px;padding:6px 8px}#demobar .dsub{display:none}}</style>'
+    '<div id="demobar">'
+    '<b style="color:#E4C79F">ДЕМО полной версии</b><span class="dsub" style="opacity:.8">данные вымышленные, раз в сутки обновляются</span>'
+    '<a href="{R}/">Анкета и запись</a>'
+    '<a href="{R}/demo/as/admin">Кабинет админа</a>'
+    '<a href="{R}/demo/as/natalia">Менеджер Наталья</a>'
+    '<a href="{R}/demo/as/roman">Менеджер Роман</a>'
+    '<a style="color:#E4C79F" href="/">← Базовая версия</a></div>')
+
+def html_page(name, bar=True):
+    with open(os.path.join(STATIC, name), encoding="utf-8") as f: txt = f.read()
+    if DEMO:
+        root = request.script_root
+        txt = _ABS.sub(lambda m: (m.group(1) + root + "/" + m.group(2)) if m.group(2) else (m.group(3) + root + "/"), txt)
+        txt = txt.replace("{{ROOT}}", root)
+        if bar: txt = re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + DEMO_BAR.replace("{R}", root), txt, count=1)
+    return Response(txt, mimetype="text/html")
+
+@app.before_request
+def edition_guard():
+    p = request.path
+    if DEMO:
+        if p in ("/gate",) or p.startswith("/static/"):
+            return None
+        if not session.get("gate") or not DEMO_HASH:
+            if p.startswith("/api/"): return jsonify(error="Нужен пароль демо."), 401
+            return redirect(P("/gate"))
+        demo_seed.ensure(DB_PATH, today_msk())
+    elif LITE and (p.startswith("/api/admin") or p.startswith("/demo")):
+        abort(404)
+
+@app.get("/gate")
+def page_gate():
+    if DEMO and session.get("gate"): return redirect(P("/"))
+    return html_page("gate.html", bar=False)
+
+@app.post("/gate")
+def do_gate():
+    if not same_origin(): return jsonify(error="Запрос отклонён."), 403
+    if rate_limited("gate:" + client_ip(), 8, 900):
+        return jsonify(error="Слишком много попыток. Подождите 15 минут."), 429
+    if not DEMO_HASH or not check_password_hash(DEMO_HASH, str(body().get("password") or "")):
+        return jsonify(error="Неверный пароль."), 401
+    demo_seed.ensure(DB_PATH, today_msk())
+    u = db().execute("SELECT id FROM users WHERE login='admin'").fetchone()
+    session.clear(); session.permanent = True
+    session["gate"] = 1
+    if u: session["uid"] = u["id"]
+    return jsonify(ok=True, to=P("/"))
+
+@app.get("/demo/as/<login>")
+def demo_as(login):
+    u = db().execute("SELECT id FROM users WHERE login=? AND active=1", (login,)).fetchone()
+    if not u: abort(404)
+    session["uid"] = u["id"]
+    return redirect(P("/admin"))
+
 @app.get("/")
-def page_book(): return send_from_directory(STATIC, "book.html")
+def page_book(): return html_page("lite.html" if LITE else "book.html")
 
 @app.get("/privacy")
-def page_privacy(): return send_from_directory(STATIC, "privacy.html")
+def page_privacy(): return html_page("privacy.html", bar=False)
 
 @app.get("/static/<path:name>")
 def static_files(name): return send_from_directory(STATIC, name)
 
-SHORT_LINKS = {k.lower(): v for k, v in FUNNEL.get("short_links", {}).items() if not k.startswith("_")}
+SHORT_LINKS = {k.lower(): v for k, v in ({} if LITE else FUNNEL.get("short_links", {})).items() if not k.startswith("_")}
 
 @app.get("/<code>")
 @app.get("/<code>/<campaign>")
@@ -347,10 +425,11 @@ def short_link(code, campaign=""):
     q = "utm_source=" + quote(src) + "&utm_medium=short"
     camp = re.sub(r"[^\w-]", "", campaign)[:60]
     if camp: q += "&utm_campaign=" + quote(camp)
-    return redirect("/?" + q, 302)
+    return redirect(P("/?") + q, 302)
 
 @app.get("/api/funnel")
 def api_funnel():
+    if DEMO: return jsonify(FUNNEL | {"logo": P(FUNNEL.get("logo", ""))} if FUNNEL.get("logo", "").startswith("/") else FUNNEL)
     return jsonify(FUNNEL)
 
 @app.post("/api/track")
@@ -392,9 +471,9 @@ def client_fields(b):
     phone = norm_phone(b.get("phone"))
     tz = (b.get("tz") or "").strip()[:40]
     if not name: return None, "Укажите, как к вам обращаться."
-    if not city: return None, "Укажите ваш город."
+    if not city and not LITE: return None, "Укажите ваш город."
     if not phone: return None, PHONE_ERROR
-    m, contact, err = clean_contact(b)
+    m, contact, err = ("", "", None) if LITE else clean_contact(b)
     if err: return None, err
     if not b.get("consent"): return None, "Отметьте согласие на обработку персональных данных — без него записать не получится."
     quiz = clean_quiz(b.get("quiz")) if b.get("quiz") else None
@@ -474,7 +553,7 @@ def booking_public(token):
         end = start + dt.timedelta(minutes=SLOT_MINUTES)
         f = lambda t: t.astimezone(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         details = "Время по Москве: " + start.strftime("%d.%m %H:%M") + (". Ссылка: " + r["meeting_link"] if r["meeting_link"] else "")
-        out.update(date=r["date"], hour=r["hour"], start=start.isoformat(), ics=f"/ics/{token}.ics",
+        out.update(date=r["date"], hour=r["hour"], start=start.isoformat(), ics=f"{request.script_root}/ics/{token}.ics",
                    gcal="https://calendar.google.com/calendar/render?action=TEMPLATE"
                         f"&text={quote(EVENT_TITLE)}&dates={f(start)}/{f(end)}&details={quote(details)}")
     return out
@@ -542,8 +621,8 @@ def ics(token):
 # ---------- вход в кабинет ----------
 @app.get("/admin/login")
 def page_login():
-    if me(): return redirect("/admin")
-    return send_from_directory(STATIC, "login.html")
+    if me() or DEMO: return redirect(P("/admin"))
+    return html_page("login.html")
 
 @app.post("/admin/login")
 def do_login():
@@ -565,7 +644,7 @@ def do_logout():
 
 @app.get("/admin")
 @login_required()
-def page_admin(): return send_from_directory(STATIC, "admin.html")
+def page_admin(): return html_page("admin_lite.html" if LITE else "admin.html")
 
 # ---------- API кабинета ----------
 def users_list():
@@ -579,7 +658,7 @@ def api_me():
     return jsonify(id=u["id"], name=u["name"], role=u["role"], users=users_list(), hours=HOURS, workdays=WORKDAYS,
                    sources=SOURCES, services=SERVICES, confirm=CONFIRM, attend=ATTEND, client_statuses=CLIENT_STATUSES,
                    messengers=[{"id": m["id"], "label": m["label"]} for m in FUNNEL["messengers"]], brand=FUNNEL["brand"], logo=FUNNEL.get("logo", ""),
-                   public_url=FUNNEL.get("public_url", ""), short_links=[{"code": k, "source": resolve_source(v)} for k, v in SHORT_LINKS.items()])
+                   public_url=(request.host_url.rstrip("/") + "/full") if DEMO else FUNNEL.get("public_url", ""), short_links=[{"code": k, "source": resolve_source(v)} for k, v in SHORT_LINKS.items()])
 
 def can_touch(manager_id):
     """Админ работает с любым расписанием, менеджер — только со своим."""
@@ -866,6 +945,48 @@ def stats():
                 per_manager.append({"id": u["id"], "name": u["name"], **row})
     return jsonify(days=days, src=src, srcs=srcs, events=ev, outcome=outcome, by_source=by_source,
                    manager=mid, per_manager=per_manager)
+
+# ---------- базовая версия: простой список записей ----------
+@app.get("/api/lite/bookings")
+@login_required(api=True)
+def lite_bookings():
+    if not LITE: abort(404)
+    since = (today_msk() - dt.timedelta(days=14)).isoformat()
+    rows = db().execute(BOOKING_SQL + "WHERE b.kind='slot' AND b.date>=? ORDER BY b.date, b.hour", (since,)).fetchall()
+    return jsonify(name=me()["name"], brand=FUNNEL["brand"], today=today_msk().isoformat(), now=iso_now(),
+                   bookings=[{"id": r["id"], "date": r["date"], "hour": r["hour"], "status": r["status"], "name": r["name"],
+                              "phone": fmt_phone(r["phone"]), "created_at": r["created_at"]} for r in rows])
+
+@app.post("/api/lite/bookings/<int:bid>/cancel")
+@login_required(api=True)
+def lite_cancel(bid):
+    if not LITE: abort(404)
+    c = db()
+    r = c.execute("SELECT id, client_id FROM bookings WHERE id=? AND status='booked'", (bid,)).fetchone()
+    if not r: return jsonify(error="Запись не найдена."), 404
+    c.execute("UPDATE bookings SET status='cancelled', updated_at=? WHERE id=?", (iso_now(), bid))
+    after_cancel(c, r["client_id"])
+    c.commit()
+    return jsonify(ok=True)
+
+# ---------- подключение демо полной версии по адресу /full ----------
+if not DEMO and (os.environ.get("DEMO_PASSWORD_HASH") or FUNNEL.get("demo_password_hash")) and os.environ.get("MOUNT_DEMO", "1") == "1":
+    import importlib.util
+    from werkzeug.middleware.dispatcher import DispatcherMiddleware
+    os.environ["ZAPIS_DEMO"] = "1"
+    try:
+        _spec = importlib.util.spec_from_file_location("zapis_demo_app", os.path.abspath(__file__))
+        _demo = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(_demo)
+    finally:
+        os.environ.pop("ZAPIS_DEMO", None)
+    def _slash(environ, start_response):  # /full → /full/
+        start_response("302 Found", [("Location", "/full/"), ("Content-Length", "0")]); return [b""]
+    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/full": _demo.app.wsgi_app})
+    _inner = app.wsgi_app
+    def _fix(environ, start_response):
+        if environ.get("PATH_INFO") == "/full": return _slash(environ, start_response)
+        return _inner(environ, start_response)
+    app.wsgi_app = _fix
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8000")), debug=False)

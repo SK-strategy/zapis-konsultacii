@@ -1,4 +1,7 @@
 {
+  "edition": "lite",
+  "_edition": "lite — базовая версия (запись + простой список), full — всё. Полная версия показывается как демо по адресу /full (пароль — ниже, хеш)",
+  "demo_password_hash": "scrypt:32768:8:1$l1R8Rk9kstAg8Lv8$2d16cec3d17ee37924091003395b7383322f9d5b4b9965880e3cb5464682354f39a0db48d016dfecb8553cc836f8cd7200f19bce6e732adb99fd38745c30e3f7",
   "brand": "Gubenko Group",
   "brand_sub": "юридическая помощь с долгами",
   "logo": "/static/logo.png",

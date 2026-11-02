@@ -4,6 +4,7 @@
   python manage.py add-user ЛОГИН "Имя" [manager|admin]          — добавить (пароль спросит)
   python manage.py set-password ЛОГИН                          — сменить пароль
   python manage.py hide ЛОГИН / show ЛОГИН                      — убрать менеджера из записи с сайта / вернуть
+  python manage.py demo-hash                                   — хеш пароля демо /full (вставить в funnel.json → demo_password_hash)
   python manage.py disable ЛОГИН                               — закрыть доступ (записи сохраняются)
 
 Роли: manager — свой кабинет, к нему записываются клиенты с сайта;
@@ -11,6 +12,7 @@
 """
 import os, sys, getpass, sqlite3
 from werkzeug.security import generate_password_hash
+os.environ.setdefault("MOUNT_DEMO", "0")  # демо /full для управления кабинетами не нужно
 import app as service
 
 def conn(): return sqlite3.connect(service.DB_PATH)
@@ -29,6 +31,8 @@ def main(a):
         for r in c.execute("SELECT login, name, role, public, active FROM users ORDER BY role='admin', id"):
             flags = ("" if r[4] else " [доступ закрыт]") + ("" if r[3] or r[2] == "admin" else " [скрыт с сайта]")
             print(f"{r[0]:16} {r[1]:20} {service.ROLES.get(r[2], r[2])}{flags}")
+    elif a[:1] == ["demo-hash"]:
+        print(generate_password_hash(ask_password()))
     elif len(a) >= 3 and a[0] in ("add-user", "ensure-user"):
         role = a[3] if len(a) > 3 and a[3] in service.ROLES else "manager"
         if c.execute("SELECT 1 FROM users WHERE login=?", (a[1],)).fetchone():
