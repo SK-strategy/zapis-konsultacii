@@ -79,7 +79,7 @@
   const dayL=iso=>fmt(iso,{weekday:'long',day:'numeric',month:'long'});
   const dayShort=iso=>fmt(iso,{weekday:'short',day:'numeric',month:'short'});
   const show=(...kids)=>{$('screen').replaceChildren(el('div',{class:'screen flow',style:'padding:0'},kids));window.scrollTo(0,0);};
-  let F=null,days=[],day=null,pick=null,form={name:'',phone:''};
+  let F=null,days=[],day=null,pick=null,moving=false,token='',form={name:'',phone:''};
 
   function phoneNational(v){v=String(v||'').trim();let d=v.replace(/\D/g,'');if(/^\+\s*7/.test(v))d=d.slice(1);if(d&&'78'.includes(d[0]))d=d.slice(1);return d.slice(0,10);}
   function phoneMask(v,del){const d=phoneNational(v);if(!d)return !del&&/\d|\+/.test(v)?'+7 (':'';let s='+7 ('+d.slice(0,3);if(d.length>3)s+=') '+d.slice(3,6);if(d.length>6)s+='-'+d.slice(6,8);if(d.length>8)s+='-'+d.slice(8,10);return s;}
@@ -93,11 +93,11 @@
   function renderSlots(){
     if(!day||!days.find(d=>d.date===day)||!freeN(days.find(d=>d.date===day)))day=(days.find(d=>freeN(d))||days[0]||{}).date;
     const cur=days.find(d=>d.date===day),any=days.some(freeN);
-    show(el('div',{class:'card'},[el('h1',{text:'Запись на консультацию'}),el('p',{text:'Выберите удобные дату и время, оставьте имя и телефон — мы подтвердим запись.'}),el('p',{class:'hint',text:'Время указано по Москве · '+F.duration})]),
+    show(el('div',{class:'card'},moving?[el('h1',{text:'Новое время'}),el('p',{text:'Выберите новое время консультации.'}),el('p',{class:'hint',text:'Время указано по Москве'})]:[el('h1',{text:'Запись на консультацию'}),el('p',{text:'Выберите удобные дату и время, оставьте имя и телефон — мы подтвердим запись.'}),el('p',{class:'hint',text:'Время указано по Москве · '+F.duration})]),
       any?el('p',{class:'label',text:'День'}):el('p',{class:'note',text:'Свободного времени на ближайшие дни нет. Попробуйте зайти позже.'}),
       any?el('div',{class:'days'},days.map(d=>{const n=freeN(d);return el('button',{type:'button',class:'day','aria-pressed':String(d.date===day),disabled:!n,onclick:()=>{day=d.date;renderSlots();}},[el('b',{text:dayShort(d.slots[0].start)}),el('small',{text:n?'свободно: '+n:'нет мест'})]);})):null,
       any?el('p',{class:'label',text:'Время'}):null,
-      any?el('div',{class:'times'},(cur?cur.slots:[]).map(s=>el('button',{type:'button',class:'time',disabled:!s.free,onclick:()=>{pick={date:day,hour:s.hour,start:s.start};contact();}},[el('b',{class:'tnum',text:timeL(s.start)}),el('small',{text:s.free?'свободно':'занято'})]))):null);
+      any?el('div',{class:'times'},(cur?cur.slots:[]).map(s=>el('button',{type:'button',class:'time',disabled:!s.free,onclick:()=>{pick={date:day,hour:s.hour,start:s.start};moving?doMove():contact();}},[el('b',{class:'tnum',text:timeL(s.start)}),el('small',{text:s.free?'свободно':'занято'})]))):null,moving?el('button',{class:'back',type:'button',text:'← Назад',onclick:()=>{moving=false;openBooking(token);}}):null);
   }
   function contact(){
     const name=el('input',{id:'n',autocomplete:'name',value:form.name}),phone=el('input',{id:'p',type:'tel',inputmode:'tel',autocomplete:'tel',placeholder:'+7 (912) 345-67-89',value:form.phone});
@@ -115,19 +115,41 @@
       const bad=!form.name?'Укажите, как к вам обращаться.':!phoneValid(form.phone)?'Проверьте номер телефона: нужен российский мобильный.':!consent.checked?'Отметьте согласие на обработку персональных данных.':'';
       if(bad){err.textContent=bad;err.hidden=false;return;}
       go.disabled=true;
-      try{const j=await api('/api/book',{name:form.name,phone:form.phone,consent:true,website:web.value,date:pick.date,hour:pick.hour,tz});done(j);}
+      try{const j=await api('/api/book',{name:form.name,phone:form.phone,consent:true,website:web.value,date:pick.date,hour:pick.hour,tz});bookingPage(j,true);}
       catch(ex){err.textContent=ex.message||'Нет связи с сервером.';err.hidden=false;if(ex.status===409)setTimeout(slots,1600);}finally{go.disabled=false;}});
     show(el('div',{class:'card'},[el('div',{class:'step-n',text:'Ваша консультация'}),el('p',{class:'q',text:dayL(pick.start)+', '+timeL(pick.start)}),el('p',{class:'hint',text:'по Москве · '+F.duration}),f]),
       el('button',{class:'back',type:'button',text:'← Выбрать другое время',onclick:renderSlots}));
     setTimeout(()=>name.focus(),0);
   }
-  function done(j){
-    show(el('div',{class:'card'},[el('span',{class:'status ok',text:'Вы записаны'}),el('h2',{text:dayL(j.start)+', '+timeL(j.start)}),el('p',{text:'Время по Москве. Мы свяжемся с вами по телефону, чтобы подтвердить консультацию.'}),
-      el('a',{class:'btn ghost',href:j.ics,text:'Добавить в календарь'})]));
+  const copyText=async(t,input)=>{try{await navigator.clipboard.writeText(t);return true;}catch(e){}try{input.focus();input.select();if(document.execCommand('copy'))return true;}catch(e){}return false;};
+  async function openBooking(t){try{bookingPage(await api('/api/booking/'+encodeURIComponent(t)));}catch(e){token='';show(el('div',{class:'card'},[el('p',{text:'Запись не найдена.'})]),el('button',{class:'btn big',type:'button',text:'Записаться',onclick:slots}));}}
+  async function doMove(){try{bookingPage(await api('/api/booking/'+token+'/move',{date:pick.date,hour:pick.hour}));}catch(e){await slots();$('screen').prepend(el('p',{class:'err',text:e.message}));}}
+  function bookingPage(j,fresh){
+    moving=false;token=j.token;
+    const link=location.origin+location.pathname+'?b='+encodeURIComponent(j.token);try{history.replaceState(null,'',link);}catch(e){}
+    let card,manage=null,copy=null;
+    if(j.status==='cancelled'){
+      card=el('div',{class:'card'},[el('span',{class:'status off',text:'Запись отменена'}),el('h2',{text:'Ваша запись отменена'}),el('p',{text:'Если захотите вернуться к вопросу, можно записаться снова.'}),el('button',{class:'btn big',type:'button',text:'Записаться снова',onclick:()=>{history.replaceState(null,'',location.pathname);slots();}})]);
+    }else{
+      card=el('div',{class:'card'},[el('span',{class:'status ok',text:'Запись подтверждена'}),el('h2',{text:fresh?(F.booked&&F.booked.title)||'Вы записаны на консультацию!':'Ваша консультация'}),
+        el('dl',{class:'kv'},[el('dt',{text:'Дата'}),el('dd',{text:dayL(j.start)}),el('dt',{text:'Время'}),el('dd',{class:'tnum',text:timeL(j.start)+' · по Москве'})]),
+        el('div',{style:'display:flex;flex-wrap:wrap;gap:8px'},[el('a',{class:'btn',href:j.ics,text:'Добавить в календарь'}),el('a',{class:'btn ghost',href:j.gcal,target:'_blank',rel:'noopener',text:'Google Календарь'})])]);
+      const conf=el('div',{class:'confirm',hidden:true},[el('span',{text:'Отменить запись? Время освободится для других.'}),el('div',{style:'display:flex;gap:8px'},[
+        el('button',{class:'btn danger',type:'button',text:'Да, отменить',onclick:async()=>{try{bookingPage(await api('/api/booking/'+j.token+'/cancel',{}));}catch(e){}}}),
+        el('button',{class:'btn ghost',type:'button',text:'Нет',onclick:()=>conf.hidden=true})])]);
+      manage=el('div',{style:'display:grid;gap:10px'},[el('div',{style:'display:flex;gap:8px'},[
+        el('button',{class:'btn ghost small',type:'button',text:'Перенести',onclick:async()=>{moving=true;await slots();}}),
+        el('button',{class:'btn ghost small',type:'button',text:'Отменить',onclick:()=>conf.hidden=false})]),conf]);
+      const inp=el('input',{class:'linkbox',readonly:true,value:link,'aria-label':'Ссылка на вашу запись',onclick:e=>e.target.select()});
+      const cb=el('button',{class:'btn ghost small',type:'button',text:'Скопировать ссылку'});
+      cb.onclick=async()=>{const ok=await copyText(link,inp);cb.textContent=ok?'Скопировано ✓':'Выделите и скопируйте';setTimeout(()=>cb.textContent='Скопировать ссылку',2500);};
+      copy=el('div',{style:'display:grid;gap:8px;border-top:1px solid var(--line);padding-top:14px'},[el('p',{class:'note',style:'margin:0',text:'Сохраните ссылку на вашу запись: по ней всегда можно посмотреть время, добавить в календарь, перенести или отменить.'}),inp,cb]);
+    }
+    show(card,manage,copy);
   }
   api('/api/funnel').then(f=>{F=f;$('brand').textContent=f.brand;$('brandsub').textContent=f.brand_sub||'';
     if(f.logo){const l=$('logo');l.textContent='';l.append(el('img',{src:f.logo,alt:''}));}
-    $('loading').remove();slots();}).catch(()=>{$('loading').textContent='Не получилось загрузить страницу. Обновите её.';});
+    $('loading').remove();const b=new URLSearchParams(location.search).get('b');b?openBooking(b):slots();}).catch(()=>{$('loading').textContent='Не получилось загрузить страницу. Обновите её.';});
 })();
 </script>
 </body>
